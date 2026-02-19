@@ -1,0 +1,38 @@
+﻿{
+  "manifest_version": 3,
+  "name": "QuickCanvas",
+  "version": "0.1.17",
+  "description": "A simple, clean Canvas dashboard overlay with assignments, grades, due dates, and calendar.",
+  "permissions": [
+    "storage",
+    "scripting",
+    "alarms",
+    "notifications",
+    "identity"
+  ],
+  "host_permissions": ["https://www.googleapis.com/*"],
+  "optional_host_permissions": ["https://*/*"],
+  "oauth2": {
+    "client_id": "436815959887-i05glpk3345qc5soph3g1a30g4tt3hda.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/calendar.events"]
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "QuickCanvas",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,475 @@
+﻿<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>QuickCanvas</title>
+        <link rel="stylesheet" href="popup.css" />
+    </head>
+    <body>
+        <main class="app">
+            <header class="top">
+                <div>
+                    <p class="eyebrow">QuickCanvas</p>
+                    <h1>Theme Gallery</h1>
+                    <p class="sub">Style your Canvas overlay and sync it.</p>
+                </div>
+                <div id="statusPill" class="pill">Not connected</div>
+            </header>
+            <p id="globalStatus" class="status"></p>
+
+            <nav class="tabs" role="tablist">
+                <button
+                    class="tab is-active"
+                    data-tab="themes"
+                    type="button"
+                    role="tab"
+                    aria-selected="true"
+                >
+                    Themes
+                </button>
+                <button
+                    class="tab"
+                    data-tab="account"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                >
+                    Account
+                </button>
+                <button
+                    id="adminTab"
+                    class="tab"
+                    data-tab="admin"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    hidden
+                >
+                    Admin
+                </button>
+            </nav>
+
+            <section class="panel" data-pane="themes">
+                <div class="panel-header">
+                    <h2>Overlay Theme</h2>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="themeMode">Theme</label>
+                        <select id="themeMode">
+                            <option value="auto">Auto</option>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="accentColor">Accent</label>
+                        <input id="accentColor" type="color" value="#1f5f8b" />
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="bgIntensity">Background intensity</label>
+                        <input
+                            id="bgIntensity"
+                            type="range"
+                            min="0"
+                            max="100"
+                            value="40"
+                        />
+                    </div>
+                    <div class="field">
+                        <label for="surfaceContrast">Surface contrast</label>
+                        <input
+                            id="surfaceContrast"
+                            type="range"
+                            min="0"
+                            max="100"
+                            value="50"
+                        />
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="bgColor">Background</label>
+                        <input id="bgColor" type="color" value="#f7f5f0" />
+                    </div>
+                    <div class="field">
+                        <label for="surfaceColor">Panel</label>
+                        <input id="surfaceColor" type="color" value="#ffffff" />
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="surfaceAltColor">Card</label>
+                        <input
+                            id="surfaceAltColor"
+                            type="color"
+                            value="#fff7ee"
+                        />
+                    </div>
+                    <div class="field">
+                        <label for="borderColor">Border</label>
+                        <input id="borderColor" type="color" value="#e6e1d6" />
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="textColor">Text</label>
+                        <input id="textColor" type="color" value="#1f2a33" />
+                    </div>
+                    <div class="field">
+                        <label for="mutedColor">Muted text</label>
+                        <input id="mutedColor" type="color" value="#6f7b83" />
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="fontBody">Body font</label>
+                        <select id="fontBody"></select>
+                    </div>
+                    <div class="field">
+                        <label for="fontHead">Heading font</label>
+                        <select id="fontHead"></select>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="radiusScale">Corner radius</label>
+                        <input
+                            id="radiusScale"
+                            type="range"
+                            min="6"
+                            max="22"
+                            value="12"
+                        />
+                    </div>
+                    <div class="field">
+                        <label for="shadowStrength">Shadow strength</label>
+                        <input
+                            id="shadowStrength"
+                            type="range"
+                            min="0"
+                            max="100"
+                            value="45"
+                        />
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="themeName">Theme name (for cloud saves)</label>
+                    <input
+                        id="themeName"
+                        type="text"
+                        placeholder="My Calm Theme"
+                    />
+                </div>
+                <div class="field">
+                    <label for="customCss">Custom CSS (advanced)</label>
+                    <textarea
+                        id="customCss"
+                        rows="4"
+                        placeholder="Use #cfe-dashboard or #cfe-sidebar selectors for safe overrides."
+                    ></textarea>
+                </div>
+                <div class="actions">
+                    <button id="saveTheme" class="primary" type="button">
+                        Apply
+                    </button>
+                    <button id="saveThemeCloud" class="secondary" type="button">
+                        Save to Cloud
+                    </button>
+                    <button id="publishTheme" class="ghost" type="button">
+                        Publish
+                    </button>
+                </div>
+                <p class="hint">Auto follows your system theme.</p>
+            </section>
+
+            <section class="panel" data-pane="themes">
+                <div class="panel-header">
+                    <h2>Presets</h2>
+                </div>
+                <div id="presetGrid" class="preset-grid"></div>
+            </section>
+
+            <section class="panel" data-pane="themes">
+                <div class="panel-header">
+                    <h2>Community Themes</h2>
+                    <div class="segmented">
+                        <button
+                            id="sortTrending"
+                            class="segmented-btn is-active"
+                            type="button"
+                        >
+                            Trending
+                        </button>
+                        <button
+                            id="sortLatest"
+                            class="segmented-btn"
+                            type="button"
+                        >
+                            Latest
+                        </button>
+                    </div>
+                </div>
+                <div id="communityList" class="community-list"></div>
+            </section>
+
+            <section class="panel" data-pane="themes">
+                <div class="panel-header">
+                    <h2>Connection</h2>
+                    <label class="switch">
+                        <input id="enabled" type="checkbox" />
+                        <span>Dashboard on</span>
+                    </label>
+                </div>
+                <div class="field">
+                    <label class="switch">
+                        <input id="calendarRemindersEnabled" type="checkbox" />
+                        <span>
+                            Google Calendar sync (adds assignments + reminders)
+                        </span>
+                    </label>
+                    <p class="hint">
+                        Adds assignments to your Google Calendar and keeps
+                        desktop notifications about 1 hour before due dates.
+                    </p>
+                </div>
+
+                <div class="field">
+                    <label for="baseUrl">Canvas Base URL</label>
+                    <input
+                        id="baseUrl"
+                        type="url"
+                        placeholder="https://your-school.instructure.com"
+                    />
+                    <p class="hint">
+                        Example: https://myschool.instructure.com
+                    </p>
+                </div>
+
+                <div class="field">
+                    <label for="apiToken">API Token</label>
+                    <input
+                        id="apiToken"
+                        type="password"
+                        placeholder="Paste your token"
+                    />
+                    <p class="hint">
+                        Canvas > Account > Settings > New Access Token
+                    </p>
+                </div>
+
+                <div class="actions">
+                    <button id="save" class="primary" type="button">
+                        Save
+                    </button>
+                    <button id="clear" class="ghost" type="button">
+                        Clear
+                    </button>
+                </div>
+                <p id="status" class="status"></p>
+            </section>
+
+            <section class="panel" data-pane="account" hidden>
+                <div class="panel-header">
+                    <h2>Account</h2>
+                </div>
+                <p id="authGateNotice" class="hint">
+                    Sign in or create an account to unlock QuickCanvas.
+                </p>
+                <div id="authModeSwitch" class="segmented">
+                    <button
+                        id="authModeSignIn"
+                        class="segmented-btn is-active"
+                        type="button"
+                    >
+                        Sign in
+                    </button>
+                    <button
+                        id="authModeSignUp"
+                        class="segmented-btn"
+                        type="button"
+                    >
+                        Create account
+                    </button>
+                </div>
+                <div class="field">
+                    <label for="authEmail">Email</label>
+                    <input
+                        id="authEmail"
+                        type="email"
+                        placeholder="you@example.com"
+                    />
+                </div>
+                <div class="field">
+                    <label for="authPassword">Password</label>
+                    <input
+                        id="authPassword"
+                        type="password"
+                        placeholder="At least 6 characters"
+                    />
+                </div>
+                <div id="authUsernameField" class="field" hidden>
+                    <label for="authUsername">Username (for sign up)</label>
+                    <input
+                        id="authUsername"
+                        type="text"
+                        placeholder="QuickCanvasHero"
+                    />
+                    <p class="hint">3-20 letters, numbers, or underscores.</p>
+                </div>
+                <div id="authSchoolStartField" class="field" hidden>
+                    <label for="authSchoolStart">School start time</label>
+                    <input id="authSchoolStart" type="time" value="08:00" />
+                    <p class="hint">
+                        Used for the "Next Due Date" window across widgets.
+                    </p>
+                </div>
+                <div class="actions">
+                    <button id="signIn" class="primary" type="button">
+                        Sign in
+                    </button>
+                    <button id="signUp" class="secondary" type="button" hidden>
+                        Create account
+                    </button>
+                    <button id="signOut" class="ghost" type="button" hidden>
+                        Sign out
+                    </button>
+                </div>
+                <p id="authStatus" class="status"></p>
+            </section>
+
+            <section
+                id="accountProfilePanel"
+                class="panel muted"
+                data-pane="account"
+                hidden
+            >
+                <div class="panel-header">
+                    <h2>Profile</h2>
+                </div>
+                <div class="field">
+                    <label for="displayName">Username</label>
+                    <input
+                        id="displayName"
+                        type="text"
+                        placeholder="QuickCanvasHero"
+                    />
+                </div>
+                <div class="field">
+                    <label for="profileSchoolStart">School start time</label>
+                    <input id="profileSchoolStart" type="time" value="08:00" />
+                    <p class="hint">Used for Next Due Date widget timing.</p>
+                </div>
+                <div class="field">
+                    <label for="profileEmail">New email (optional)</label>
+                    <input
+                        id="profileEmail"
+                        type="email"
+                        placeholder="new-email@example.com"
+                    />
+                    <p class="hint">
+                        Requires verification with your current password.
+                    </p>
+                </div>
+                <div class="field">
+                    <label for="profileCurrentPassword">Current password</label>
+                    <input
+                        id="profileCurrentPassword"
+                        type="password"
+                        placeholder="Required for email/password changes"
+                    />
+                </div>
+                <div class="field">
+                    <label for="profileNewPassword"
+                        >New password (optional)</label
+                    >
+                    <input
+                        id="profileNewPassword"
+                        type="password"
+                        placeholder="At least 6 characters"
+                    />
+                </div>
+                <div class="field">
+                    <label for="profileNewPasswordConfirm"
+                        >Confirm new password</label
+                    >
+                    <input
+                        id="profileNewPasswordConfirm"
+                        type="password"
+                        placeholder="Re-enter new password"
+                    />
+                </div>
+                <p id="profileStatus" class="status"></p>
+                <div class="actions">
+                    <button id="saveProfile" class="secondary" type="button">
+                        Save Profile
+                    </button>
+                </div>
+            </section>
+
+            <section
+                id="accountCloudPanel"
+                class="panel muted"
+                data-pane="account"
+                hidden
+            >
+                <div class="panel-header">
+                    <h2>Cloud Themes</h2>
+                </div>
+                <div id="cloudList" class="cloud-list"></div>
+                <div class="actions">
+                    <button id="refreshCloud" class="ghost" type="button">
+                        Refresh
+                    </button>
+                </div>
+            </section>
+
+            <section class="panel" data-pane="admin" hidden>
+                <div class="panel-header">
+                    <h2>Reports</h2>
+                </div>
+                <div id="reportList" class="admin-list"></div>
+                <div class="actions">
+                    <button id="refreshReports" class="ghost" type="button">
+                        Refresh
+                    </button>
+                </div>
+            </section>
+
+            <section class="panel" data-pane="admin" hidden>
+                <div class="panel-header">
+                    <h2>Community Themes</h2>
+                </div>
+                <div id="adminThemes" class="admin-list"></div>
+                <div class="actions">
+                    <button id="refreshAdminThemes" class="ghost" type="button">
+                        Refresh
+                    </button>
+                </div>
+            </section>
+
+            <section id="tokenHelpPanel" class="panel muted">
+                <h2>Need a token?</h2>
+                <ol>
+                    <li>Open your school Canvas login.</li>
+                    <li>Sign in or create your account.</li>
+                    <li>Generate a token in Account Settings.</li>
+                </ol>
+                <div class="actions">
+                    <button id="openCanvas" class="secondary" type="button">
+                        Open Canvas
+                    </button>
+                    <button id="openOptions" class="ghost" type="button">
+                        Full settings
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <script src="supabase.js"></script>
+        <script src="popup.js"></script>
+    </body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>QuickCanvas Ad Kit</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <main class="stage">
+            <section
+                class="phone-ad"
+                aria-label="QuickCanvas TikTok-style promo"
+            >
+                <div class="chrome-top">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <p class="top-label">Student setup</p>
+                </div>
+
+                <div class="slideshow-wrap">
+                    <div
+                        id="slideshow"
+                        class="slideshow"
+                        aria-live="polite"
+                    ></div>
+                    <div class="slide-gradient"></div>
+                    <div id="narration" class="narration">
+                        If Canvas feels messy, this is for you.
+                    </div>
+                </div>
+
+                <div class="content">
+                    <div class="hook-row">
+                        <p class="eyebrow">QuickCanvas for Canvas LMS</p>
+                        <span id="sceneTag" class="scene-tag">Problem</span>
+                    </div>
+                    <h1 id="sceneHeadline">
+                        Canvas is wasting your study time.
+                    </h1>
+                    <p id="sceneSubline" class="subline">
+                        One clean dashboard beats five confusing clicks.
+                    </p>
+                    <ul class="benefits">
+                        <li id="benefit1">
+                            See what is due next in one glance
+                        </li>
+                        <li id="benefit2">
+                            Stay focused with cleaner dashboards
+                        </li>
+                        <li id="benefit3">
+                            Customize themes your way in seconds
+                        </li>
+                    </ul>
+                    <a
+                        class="cta"
+                        href="https://chromewebstore.google.com/detail/quickcanvas/idbfbbbgenhgkklhmijibbjknagpdiab"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >Try QuickCanvas</a
+                    >
+                    <div class="meta-row">
+                        <span class="meta-pill">Built for students</span>
+                        <span class="meta-pill">No learning curve</span>
+                    </div>
+                    <div class="progress-track" aria-hidden="true">
+                        <div id="progressBar" class="progress-bar"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <script src="app.js"></script>
+    </body>
+</html>

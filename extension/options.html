@@ -1,0 +1,63 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Canvas Friendly Extension - Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <h1>Canvas Friendly Extension</h1>
+      <p>Connect your Canvas account to see assignments, announcements, and personal tasks right where you work.</p>
+    </header>
+
+    <section class="cards">
+      <section class="card">
+        <div class="card-head">
+          <h2>Connection</h2>
+          <p>Use your Canvas base URL and API token to sync your data.</p>
+        </div>
+
+        <div class="field">
+          <label for="baseUrl">Canvas Base URL</label>
+          <input id="baseUrl" type="url" placeholder="https://your-school.instructure.com" />
+          <small>Example: https://myschool.instructure.com</small>
+        </div>
+
+        <div class="field">
+          <label for="apiToken">Canvas API Token</label>
+          <input id="apiToken" type="password" placeholder="Paste your token" />
+          <small>Canvas &gt; Account &gt; Settings &gt; New Access Token</small>
+        </div>
+
+        <label class="toggle">
+          <input id="enabled" type="checkbox" />
+          <span>Enable dashboard injection</span>
+        </label>
+
+        <div class="actions">
+          <button id="save">Save changes</button>
+          <button id="clear" class="secondary">Clear</button>
+        </div>
+        <p id="status" class="status"></p>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>How it works</h2>
+          <p>Get set up in a few minutes.</p>
+        </div>
+        <div class="tips">
+          <div>1. Save your Canvas base URL and API token.</div>
+          <div>2. Open any Canvas page.</div>
+          <div>3. The dashboard appears at the top of the main content.</div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="options.js"></script>
+</body>
+</html>
