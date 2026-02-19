@@ -1,0 +1,200 @@
+:root {
+    --bg: #0f172a;
+    --surface: #172338;
+    --surface-2: #21324f;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #06b6d4;
+    --line: rgba(148, 163, 184, 0.22);
+    --glow: rgba(6, 182, 212, 0.28);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Bahnschrift", "Segoe UI", sans-serif;
+    background:
+        radial-gradient(circle at 8% 0%, #274675 0%, transparent 40%),
+        radial-gradient(circle at 92% 100%, #102745 0%, transparent 36%),
+        linear-gradient(155deg, #0f172a 0%, #0a1020 100%);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+.wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px 20px 70px;
+}
+
+.card {
+    background: linear-gradient(
+        155deg,
+        rgba(23, 35, 56, 0.94),
+        rgba(15, 23, 42, 0.92)
+    );
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 34px;
+    box-shadow:
+        0 34px 64px rgba(0, 0, 0, 0.32),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+h1,
+h2 {
+    margin: 0 0 14px;
+}
+
+h1 {
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+    letter-spacing: 0.02em;
+    line-height: 1.02;
+}
+
+h2 {
+    font-size: 1.22rem;
+    margin-top: 24px;
+}
+
+p,
+li {
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.brand {
+    color: var(--accent);
+    text-shadow: 0 0 22px var(--glow);
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 24px;
+}
+
+.btn {
+    border: 1px solid rgba(6, 182, 212, 0.55);
+    color: var(--text);
+    background: linear-gradient(
+        145deg,
+        rgba(6, 182, 212, 0.2),
+        rgba(6, 182, 212, 0.08)
+    );
+    padding: 12px 16px;
+    border-radius: 12px;
+    display: inline-block;
+    font-weight: 700;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.btn:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    border-color: rgba(6, 182, 212, 0.9);
+    box-shadow: 0 14px 30px rgba(6, 182, 212, 0.22);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(6, 182, 212, 0.16);
+    border: 1px solid rgba(6, 182, 212, 0.32);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #bff2fc;
+}
+
+.hero {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 22px;
+    align-items: stretch;
+}
+
+.hero-copy {
+    display: grid;
+    gap: 16px;
+}
+
+.hero-panel {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 18px;
+    background: linear-gradient(
+        160deg,
+        rgba(33, 50, 79, 0.74),
+        rgba(13, 24, 43, 0.84)
+    );
+}
+
+.hero-panel h3 {
+    margin: 0 0 10px;
+    font-size: 1.04rem;
+}
+
+.hero-panel ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.highlights {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.tile {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: linear-gradient(
+        160deg,
+        rgba(34, 50, 82, 0.75),
+        rgba(16, 27, 49, 0.85)
+    );
+    padding: 14px 16px;
+}
+
+.tile strong {
+    display: block;
+    color: var(--text);
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+.tile span {
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+
+@media (max-width: 860px) {
+    .hero {
+        grid-template-columns: 1fr;
+    }
+
+    .highlights {
+        grid-template-columns: 1fr;
+    }
+}
