@@ -2199,13 +2199,29 @@ async function saveTheme() {
 
 function renderPresets() {
   presetGrid.innerHTML = PRESETS.map((preset, index) => {
+    const presetBg =
+      preset.bg || (preset.mode === "dark" ? "#0f172a" : "#f8fafc");
+    const presetSurface =
+      preset.surface || (preset.mode === "dark" ? "#172033" : "#ffffff");
     return `
-      <button class="preset" type="button" data-index="${index}" data-name="${preset.name}">
-        <div class="preset-title">${preset.name}</div>
-        <div class="preset-swatches">
-          <span class="preset-swatch" style="background:${preset.accent}"></span>
-          <span class="preset-swatch" style="background:${preset.surface || (preset.mode === "dark" ? "#111827" : "#ffffff")}"></span>
-          <span class="preset-swatch" style="background:${preset.bg || (preset.mode === "dark" ? "#0f172a" : "#f8fafc")}"></span>
+      <button class="preset" type="button" data-index="${index}" data-name="${preset.name}" style="--preset-accent:${preset.accent};--preset-bg:${presetBg};--preset-surface:${presetSurface};--preset-text:${preset.text}">
+        <div class="preset-preview" aria-hidden="true">
+          <div class="preset-preview-nav">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="preset-preview-content">
+            <span class="preset-preview-title"></span>
+            <span class="preset-preview-line"></span>
+            <span class="preset-preview-line short"></span>
+          </div>
+        </div>
+        <div class="preset-footer">
+          <div class="preset-title">${preset.name}</div>
+          <div class="preset-swatches">
+            <span class="preset-swatch" style="background:${preset.accent}"></span>
+            <span class="preset-swatch" style="background:${presetSurface}"></span>
+            <span class="preset-swatch" style="background:${presetBg}"></span>
+          </div>
         </div>
       </button>
     `;
