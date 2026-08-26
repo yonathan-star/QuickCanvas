@@ -2,7 +2,7 @@
 
 const DEFAULT_SETTINGS = {
   baseUrl: "",
-  apiToken: "",
+  authMode: "canvas_session",
   enabled: true,
 };
 
@@ -266,7 +266,8 @@ async function ensureDefaults() {
     if (!canvasSettings) {
       payload.canvasSettings = DEFAULT_SETTINGS;
     } else {
-      payload.canvasSettings = { ...DEFAULT_SETTINGS, ...canvasSettings };
+      const { apiToken: _legacyApiToken, ...safeSettings } = canvasSettings;
+      payload.canvasSettings = { ...DEFAULT_SETTINGS, ...safeSettings };
     }
     if (typeof stored?.[CALENDAR_REMINDER_KEY] !== "boolean") {
       payload[CALENDAR_REMINDER_KEY] = false;
@@ -277,22 +278,6 @@ async function ensureDefaults() {
   } catch (error) {
     // Ignore initialization issues to avoid hard-failing service worker startup.
   }
-}
-
-function resolveNextLink(linkHeader, baseUrl) {
-  const raw = String(linkHeader || "");
-  if (!raw) return "";
-  const parts = raw.split(",");
-  for (const part of parts) {
-    if (!/rel\s*=\s*"next"/i.test(part)) continue;
-    const match = part.match(/<([^>]+)>/);
-    if (!match?.[1]) continue;
-    const href = match[1].trim();
-    if (/^https?:\/\//i.test(href)) return href;
-    if (href.startsWith("/")) return `${baseUrl}${href}`;
-    return `${baseUrl}/${href}`;
-  }
-  return "";
 }
 
 function toAbsoluteCanvasUrl(rawUrl, baseUrl) {
@@ -353,7 +338,7 @@ function plannerItemToReminderAssignment(item, baseUrl) {
   };
 }
 
-async function loadCanvasAssignmentsFromApi() {
+async function loadCanvasAssignmentsFromSession() {
   const stored = await chrome.storage.sync.get([
     "canvasSettings",
     CALENDAR_REMINDER_KEY,
@@ -368,57 +353,52 @@ async function loadCanvasAssignmentsFromApi() {
   const baseUrl = String(settings?.baseUrl || "")
     .trim()
     .replace(/\/+$/, "");
-  const apiToken = String(settings?.apiToken || "").trim();
   const dashboardEnabled = settings?.enabled !== false;
 
-  if (!dashboardEnabled || !baseUrl || !apiToken) {
-    return [];
+  if (!dashboardEnabled || !baseUrl) {
+    return null;
   }
 
-  const start = new Date().toISOString();
-  const end = new Date(Date.now() + MAX_DUE_LOOKAHEAD_MS).toISOString();
-  const params = new URLSearchParams();
-  params.set("start_date", start);
-  params.set("end_date", end);
-  params.set("per_page", "100");
-  params.append("include[]", "submission");
-  params.append("include[]", "submissions");
-
-  let nextUrl = `${baseUrl}/api/v1/planner/items?${params.toString()}`;
-  let pages = 0;
-  const allItems = [];
-
-  while (nextUrl && pages < 6) {
-    const response = await fetch(nextUrl, {
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-      },
-    });
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(
-        `Canvas API ${response.status}: ${(body || "request failed").slice(0, 220)}`,
-      );
-    }
-    const pageItems = await response.json();
-    if (Array.isArray(pageItems)) {
-      allItems.push(...pageItems);
-    }
-    nextUrl = resolveNextLink(response.headers.get("link"), baseUrl);
-    pages += 1;
+  let tabs = [];
+  try {
+    tabs = await chrome.tabs.query({ url: `${baseUrl}/*` });
+  } catch (error) {
+    return null;
   }
 
-  return allItems
-    .map((item) => plannerItemToReminderAssignment(item, baseUrl))
-    .filter((item) => item && item.due_at);
+  for (const tab of tabs) {
+    if (!tab?.id) continue;
+    try {
+      const result = await chrome.tabs.sendMessage(tab.id, {
+        type: "cfe-fetch-reminder-assignments",
+        lookaheadMs: MAX_DUE_LOOKAHEAD_MS,
+      });
+      if (!result?.ok || !Array.isArray(result.items)) continue;
+      return result.items
+        .map((item) => plannerItemToReminderAssignment(item, baseUrl))
+        .filter((item) => item && item.due_at);
+    } catch (error) {
+      // Try another open Canvas tab. A tab may still be loading its content script.
+    }
+  }
+
+  return null;
 }
 
 async function syncFromCanvasApi() {
-  const assignments = await loadCanvasAssignmentsFromApi();
+  const assignments = await loadCanvasAssignmentsFromSession();
+  if (!assignments) {
+    return {
+      ok: true,
+      skipped: true,
+      source: "canvas_session",
+      reason: "Open a signed-in Canvas tab to refresh assignments.",
+    };
+  }
   const result = await syncReminderAlarms(assignments);
   return {
     ok: true,
-    source: "canvas_api",
+    source: "canvas_session",
     fetchedAssignments: assignments.length,
     ...result,
   };

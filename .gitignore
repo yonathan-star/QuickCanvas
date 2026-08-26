@@ -1,0 +1,6 @@
+# Local release packages
+outputs/
+
+# Extension signing keys must never be committed.
+*.pem
+

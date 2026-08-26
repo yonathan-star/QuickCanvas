@@ -38,6 +38,64 @@
   };
   let schoolStartMinutes = DEFAULT_SCHOOL_START_MINUTES;
 
+  function resolveNextCanvasLink(linkHeader) {
+    for (const part of String(linkHeader || "").split(",")) {
+      if (!/rel\s*=\s*"next"/i.test(part)) continue;
+      const match = part.match(/<([^>]+)>/);
+      if (match?.[1]) return match[1];
+    }
+    return "";
+  }
+
+  async function fetchReminderAssignmentsFromCanvasSession(lookaheadMs) {
+    const start = new Date().toISOString();
+    const safeLookahead = Math.min(
+      Math.max(Number(lookaheadMs) || 0, 24 * 60 * 60 * 1000),
+      90 * 24 * 60 * 60 * 1000,
+    );
+    const end = new Date(Date.now() + safeLookahead).toISOString();
+    const params = new URLSearchParams({
+      start_date: start,
+      end_date: end,
+      per_page: "100",
+    });
+    params.append("include[]", "submission");
+    params.append("include[]", "submissions");
+
+    let nextUrl = `${window.location.origin}/api/v1/planner/items?${params}`;
+    const items = [];
+    let pages = 0;
+    while (nextUrl && pages < 6) {
+      const response = await fetch(nextUrl, {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401 || response.status === 403
+            ? "Sign in to Canvas, then reload this page."
+            : `Canvas request failed: ${response.status}`,
+        );
+      }
+      const pageItems = await response.json();
+      if (Array.isArray(pageItems)) items.push(...pageItems);
+      nextUrl = resolveNextCanvasLink(response.headers.get("link"));
+      pages += 1;
+    }
+    return items;
+  }
+
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (isStaleInstance()) return;
+    if (message?.type !== "cfe-fetch-reminder-assignments") return;
+    void fetchReminderAssignmentsFromCanvasSession(message.lookaheadMs)
+      .then((items) => sendResponse({ ok: true, items }))
+      .catch((error) =>
+        sendResponse({ ok: false, error: String(error?.message || error) }),
+      );
+    return true;
+  });
+
   function isDashboardPath(pathname) {
     return (
       pathname === "/" ||
@@ -2439,8 +2497,6 @@
       }
     })();
     if (!baseOrigin || baseOrigin !== window.location.origin) return;
-    const apiToken = String(canvasSettings.apiToken || "").trim();
-    if (!apiToken) return;
 
     let host = null;
     for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -2478,10 +2534,9 @@
     const url = new URL(`${baseOrigin}/api/v1/courses/${courseId}/assignments`);
     url.searchParams.set("per_page", "100");
     url.searchParams.append("include[]", "submission");
-    url.searchParams.set("access_token", apiToken);
-
     try {
       const response = await fetch(url.toString(), {
+        credentials: "include",
         headers: { Accept: "application/json" },
       });
       if (!response.ok) {
@@ -2619,8 +2674,7 @@
     }
 
     const baseUrl = (canvasSettings.baseUrl || "").replace(/\/$/, "");
-    const apiToken = canvasSettings.apiToken || "";
-    if (!baseUrl || !apiToken) {
+    if (!baseUrl) {
       resetTheme();
       removeDashboardShell();
       window.__cfeInjected = false;
@@ -4979,9 +5033,8 @@
           url.searchParams.set(key, value);
         }
       });
-      url.searchParams.set("access_token", apiToken);
-
       const response = await fetch(url.toString(), {
+        credentials: "include",
         headers: {
           Accept: "application/json",
         },
@@ -4990,7 +5043,7 @@
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
           throw new Error(
-            "Unauthorized. Check your API token and its permissions.",
+            "Canvas session unavailable. Sign in to Canvas, then reload this page.",
           );
         }
         if (response.status === 404) {
@@ -5014,7 +5067,7 @@
       const contentType = response.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
         throw new Error(
-          "Unexpected response. Check your Canvas base URL and API token.",
+          "Unexpected response. Check your Canvas URL and make sure you are signed in.",
         );
       }
 

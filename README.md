@@ -1,9 +1,28 @@
 # QuickCanvas Workspace
 
+QuickCanvas connects to Canvas through the user's existing signed-in Canvas
+browser session. It does not ask students to create or paste personal Canvas
+access tokens. Enter the school's HTTPS Canvas URL in the extension, grant site
+access, and sign in to Canvas normally.
+
+Canvas OAuth is still the supported option for a standalone or multi-school
+service. It requires an administrator-enabled Developer Key and a trusted
+backend for the client secret; never embed that secret in this extension.
+
 - `extension/` contains the browser extension source.
 - `ad-kit/` contains the TikTok ad project and recording scripts.
 - `oauth-branding/` contains the OAuth homepage + policy pages.
 - `.github/workflows/pages.yml` auto-deploys `oauth-branding/` to GitHub Pages.
+
+## Release the extension
+
+1. Increase `version` in `extension/manifest.json`.
+2. Test the unpacked extension locally.
+3. Commit and push the change to `main`.
+4. ZIP the contents of `extension/` so `manifest.json` is at the root of the
+   ZIP file. Exclude the older ZIP archives stored in that folder.
+5. In the Chrome Developer Dashboard, open QuickCanvas, choose **Package**, and
+   upload the new ZIP.
 
 Ad recording:
 1. `cd ad-kit`

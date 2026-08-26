@@ -1,5 +1,4 @@
 ﻿const baseUrlInput = document.getElementById("baseUrl");
-const apiTokenInput = document.getElementById("apiToken");
 const enabledInput = document.getElementById("enabled");
 const calendarRemindersEnabledInput = document.getElementById(
   "calendarRemindersEnabled",
@@ -2252,10 +2251,13 @@ async function loadSettings() {
   }
 
   baseUrlInput.value = canvasSettings.baseUrl || "";
-  apiTokenInput.value = canvasSettings.apiToken || "";
   enabledInput.checked = canvasSettings.enabled ?? true;
   if (calendarRemindersEnabledInput) {
     calendarRemindersEnabledInput.checked = Boolean(calendarRemindersEnabled);
+  }
+  if (!normalizeBaseUrl(canvasSettings.baseUrl || "")) {
+    setPill(false);
+    return;
   }
   const accessState = await ensureCanvasSiteAccess(canvasSettings.baseUrl, {
     prompt: false,
@@ -2265,14 +2267,13 @@ async function loadSettings() {
   }
   setPill(
     Boolean(
-      canvasSettings.baseUrl && canvasSettings.apiToken && accessState.ok,
+      canvasSettings.baseUrl && accessState.ok,
     ),
   );
 }
 
 async function saveSettings() {
   const baseUrl = normalizeBaseUrl(baseUrlInput.value);
-  const apiToken = apiTokenInput.value.trim();
   const enabled = enabledInput.checked;
   const calendarRemindersEnabled = Boolean(
     calendarRemindersEnabledInput?.checked,
@@ -2332,7 +2333,7 @@ async function saveSettings() {
     }
   };
 
-  if (!baseUrl || !apiToken) {
+  if (!baseUrl) {
     await saveReminderPreference();
     const calendarConnected = await ensureGoogleCalendarConnected();
     if (!calendarConnected && calendarRemindersEnabled) {
@@ -2341,7 +2342,7 @@ async function saveSettings() {
     }
     await runImmediateCalendarSync();
     setStatus(
-      "Saved reminder preference. Add a valid base URL and API token to update connection settings.",
+      "Saved reminder preference. Add a valid Canvas URL to update connection settings.",
       true,
     );
     setPill(false);
@@ -2351,7 +2352,7 @@ async function saveSettings() {
   await chrome.storage.sync.set({
     canvasSettings: {
       baseUrl,
-      apiToken,
+      authMode: "canvas_session",
       enabled,
     },
   });
@@ -2377,9 +2378,11 @@ async function saveSettings() {
   await runImmediateCalendarSync();
 
   if (calendarRemindersEnabled) {
-    setStatus("Saved. Canvas connected and Google Calendar sync is on.");
+    setStatus(
+      "Saved. Open or reload Canvas while signed in to refresh Google Calendar.",
+    );
   } else {
-    setStatus("Saved. Access limited to your Canvas URL.");
+    setStatus("Saved. Open or reload Canvas while signed in to connect.");
   }
   setPill(true);
 }
@@ -2388,7 +2391,6 @@ async function clearSettings() {
   await clearCanvasSiteAccess();
   await chrome.storage.sync.remove(["canvasSettings", CALENDAR_REMINDER_KEY]);
   baseUrlInput.value = "";
-  apiTokenInput.value = "";
   enabledInput.checked = true;
   if (calendarRemindersEnabledInput) {
     calendarRemindersEnabledInput.checked = false;
