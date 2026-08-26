@@ -11,12 +11,14 @@
             <header class="top">
                 <div>
                     <p class="eyebrow">QuickCanvas</p>
-                    <h1>Theme Gallery</h1>
-                    <p class="sub">Style your Canvas overlay and sync it.</p>
+                    <h1>Your Canvas, upgraded.</h1>
+                    <p class="sub">Assignments, reminders, and your style.</p>
                 </div>
-                <div id="statusPill" class="pill">Not connected</div>
+                <div id="statusPill" class="pill" aria-live="polite">
+                    Not connected
+                </div>
             </header>
-            <p id="globalStatus" class="status"></p>
+            <p id="globalStatus" class="status" role="status" aria-live="polite"></p>
 
             <nav class="tabs" role="tablist">
                 <button
@@ -50,10 +52,13 @@
                 </button>
             </nav>
 
-            <section class="panel" data-pane="themes">
+            <section class="panel theme-editor-panel" data-pane="themes">
                 <div class="panel-header">
-                    <h2>Overlay Theme</h2>
+                    <h2>Fine-tune your theme</h2>
                 </div>
+                <details class="theme-advanced">
+                    <summary>Open theme controls</summary>
+                    <div class="theme-advanced-body">
                 <div class="field-row">
                     <div class="field">
                         <label for="themeMode">Theme</label>
@@ -172,6 +177,8 @@
                         placeholder="Use #cfe-dashboard or #cfe-sidebar selectors for safe overrides."
                     ></textarea>
                 </div>
+                    </div>
+                </details>
                 <div class="actions">
                     <button id="saveTheme" class="primary" type="button">
                         Apply
@@ -186,14 +193,14 @@
                 <p class="hint">Auto follows your system theme.</p>
             </section>
 
-            <section class="panel" data-pane="themes">
+            <section class="panel preset-panel" data-pane="themes">
                 <div class="panel-header">
                     <h2>Presets</h2>
                 </div>
                 <div id="presetGrid" class="preset-grid"></div>
             </section>
 
-            <section class="panel" data-pane="themes">
+            <section class="panel community-panel" data-pane="themes">
                 <div class="panel-header">
                     <h2>Community Themes</h2>
                     <div class="segmented">
@@ -216,9 +223,12 @@
                 <div id="communityList" class="community-list"></div>
             </section>
 
-            <section class="panel" data-pane="themes">
+            <section class="panel connection-panel" data-pane="themes">
                 <div class="panel-header">
-                    <h2>Connection</h2>
+                    <div>
+                        <p class="panel-kicker">Start here</p>
+                        <h2>Connect Canvas</h2>
+                    </div>
                     <label class="switch">
                         <input id="enabled" type="checkbox" />
                         <span>Dashboard on</span>
@@ -249,7 +259,8 @@
                     </p>
                 </div>
 
-                <div class="field">
+                <div class="connection-note">
+                    <span class="connection-note-icon" aria-hidden="true">✓</span>
                     <p class="hint">
                         QuickCanvas uses your signed-in Canvas browser session.
                         No personal access token is needed or stored.
@@ -264,7 +275,7 @@
                         Clear
                     </button>
                 </div>
-                <p id="status" class="status"></p>
+                <p id="status" class="status" role="status" aria-live="polite"></p>
             </section>
 
             <section class="panel" data-pane="account" hidden>
@@ -333,7 +344,7 @@
                         Sign out
                     </button>
                 </div>
-                <p id="authStatus" class="status"></p>
+                <p id="authStatus" class="status" role="status" aria-live="polite"></p>
             </section>
 
             <section
@@ -446,7 +457,7 @@
                 </div>
             </section>
 
-            <section id="tokenHelpPanel" class="panel muted">
+            <section id="tokenHelpPanel" class="panel muted help-panel">
                 <h2>Connect Canvas</h2>
                 <ol>
                     <li>Open your school Canvas login.</li>

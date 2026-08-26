@@ -508,11 +508,7 @@ function setAuthStatus(message, isError = false) {
     authGateNoticeEl.textContent = message;
     authGateNoticeEl.classList.toggle("error", isError);
   }
-  if (statusPill && message) {
-    statusPill.textContent = isError ? "Auth error" : "Connected";
-    statusPill.classList.toggle("connected", !isError);
-  }
-  if (authStatusEl && message) {
+  if (authStatusEl && message && isError) {
     authStatusEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 }
@@ -560,12 +556,26 @@ function escapeAttr(value) {
 
 function withUiError(label, handler) {
   return async (...args) => {
+    const button =
+      args[0]?.currentTarget instanceof HTMLButtonElement
+        ? args[0].currentTarget
+        : null;
+    if (button?.disabled) return;
+    if (button) {
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+    }
     try {
       await handler(...args);
     } catch (error) {
       const msg = `${label}: ${errorMessage(error)}`;
       console.error("[QuickCanvas]", msg, error);
       setAuthStatus(msg, true);
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+      }
     }
   };
 }
@@ -5462,9 +5472,6 @@ function updateAuthUI(session) {
   if (!signedIn) {
     applyThemeToInputs(getDefaultPopupTheme());
     setActiveTab("account");
-    setPill(false);
-  } else {
-    setPill(true);
   }
   if (adminTabBtn) {
     adminTabBtn.hidden = !signedIn || !isAdmin(session);
@@ -5659,25 +5666,13 @@ if (supabaseClient) {
       }
       updateAuthUI(effectiveSession);
       if (effectiveSession) {
-        await loadTheme(true);
-        await loadProfile();
-        updateAuthUI(effectiveSession);
         await setAuthGateState({
           authenticated: true,
           hasUsername: true,
           userId: effectiveSession.user.id,
         });
-        await loadCloudThemes();
-        await loadCommunityThemes(
-          sortLatestBtn.classList.contains("is-active") ? "latest" : "trending",
-          { force: true },
-        );
-        if (isAdmin(effectiveSession)) {
-          await Promise.all([
-            loadAdminReports({ force: true }),
-            loadAdminThemes({ force: true }),
-          ]);
-        }
+        await Promise.allSettled([loadTheme(true), loadProfile()]);
+        updateAuthUI(effectiveSession);
       } else {
         await loadTheme(false);
         currentProfileUsername = "";
@@ -5695,36 +5690,33 @@ if (supabaseClient) {
 
 (async () => {
   try {
-    await loadForceSignedOutState();
-    await loadStoredSchoolStartMinutes();
     setAuthMode("signin");
     setActiveTab(getStoredActiveTab() || "account");
     renderFontOptions();
     renderPresets();
-    await loadTheme(false);
-    await loadSettings();
-    await loadCommunityThemes("trending");
+    await Promise.all([
+      loadForceSignedOutState(),
+      loadStoredSchoolStartMinutes(),
+      loadTheme(false),
+      loadSettings(),
+    ]);
 
     if (supabaseClient) {
       const session = await getActiveSession();
       if (session) {
-        await loadTheme(true);
+        updateAuthUI(session);
         setActiveTab(getStoredActiveTab() || "themes");
-        await loadProfile();
         await setAuthGateState({
           authenticated: true,
           hasUsername: true,
           userId: session.user.id,
         });
-        updateAuthUI(session);
-        await loadCloudThemes();
-        await loadCommunityThemes("trending", { force: true });
-        if (isAdmin(session)) {
-          await Promise.all([
-            loadAdminReports({ force: true }),
-            loadAdminThemes({ force: true }),
-          ]);
-        }
+        await loadTheme(true);
+        void loadProfile()
+          .then(() => updateAuthUI(session))
+          .catch((error) =>
+            console.warn("[QuickCanvas] profile preload failed:", error),
+          );
       } else {
         await loadTheme(false);
         currentProfileUsername = "";
