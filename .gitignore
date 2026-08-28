@@ -1,6 +1,6 @@
 # Local release packages
 outputs/
+.superdesign/
 
 # Extension signing keys must never be committed.
 *.pem
-

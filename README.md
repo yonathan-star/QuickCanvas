@@ -9,6 +9,11 @@ Canvas OAuth is still the supported option for a standalone or multi-school
 service. It requires an administrator-enabled Developer Key and a trusted
 backend for the client secret; never embed that secret in this extension.
 
+Version 0.5 introduces a unified visual system across the dashboard, course
+pages, modules, assignments, discussions, grades, calendar, settings, and
+quizzes. The dashboard keeps its movable widgets while using a wider, faster
+workspace layout.
+
 - `extension/` contains the browser extension source.
 - `ad-kit/` contains the TikTok ad project and recording scripts.
 - `oauth-branding/` contains the OAuth homepage + policy pages.

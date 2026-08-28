@@ -270,7 +270,10 @@ body.cfe-theme-applied .ic-app-header__secondary-navigation {
     border-bottom: 1px solid var(--cfe-border) !important;
 }
 
-body.cfe-theme-applied #global_nav {\r\n    background: initial !important;\r\n    border-right: none !important;\r\n}\r\n
+body.cfe-theme-applied #global_nav {
+    background: var(--cfe-nav-bg) !important;
+    border-right: 1px solid var(--cfe-nav-divider) !important;
+}
 body.cfe-theme-applied #global_nav .ic-app-header__logo,
 body.cfe-theme-applied #global_nav .ic-app-header__logo img,
 body.cfe-theme-applied #global_nav .ic-app-header__logo svg,
@@ -293,7 +296,31 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo-link {
     background: transparent !important;
 }
 
-body.cfe-theme-applied #global_nav .menu-item,\r\nbody.cfe-theme-applied #global_nav .menu-item a,\r\nbody.cfe-theme-applied #global_nav .ic-app-header__menu-list-item,\r\nbody.cfe-theme-applied #global_nav .ic-app-header__menu-list-item a {\r\n    background: initial !important;\r\n    color: inherit !important;\r\n}\r\n\r\nbody.cfe-theme-applied #global_nav .menu-item__icon,\r\nbody.cfe-theme-applied #global_nav .menu-item__icon svg,\r\nbody.cfe-theme-applied #global_nav .ic-app-header__menu-list-item svg {\r\n    color: inherit !important;\r\n    fill: currentColor !important;\r\n}\r\n\r\nbody.cfe-theme-applied #global_nav .menu-item:hover,\r\nbody.cfe-theme-applied #global_nav .ic-app-header__menu-list-item:hover,\r\nbody.cfe-theme-applied #global_nav .menu-item a:hover,\r\nbody.cfe-theme-applied #global_nav .ic-app-header__menu-list-item a:hover,\r\nbody.cfe-theme-applied #global_nav .menu-item--active,\r\nbody.cfe-theme-applied #global_nav .ic-app-header__menu-list-item--active,\r\nbody.cfe-theme-applied #global_nav .ic-app-header__menu-list-item--active a {\r\n    background: initial !important;\r\n    color: inherit !important;\r\n}\r\n
+body.cfe-theme-applied #global_nav .menu-item,
+body.cfe-theme-applied #global_nav .menu-item a,
+body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item,
+body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item a {
+    background: transparent !important;
+    color: var(--cfe-nav-text) !important;
+}
+
+body.cfe-theme-applied #global_nav .menu-item__icon,
+body.cfe-theme-applied #global_nav .menu-item__icon svg,
+body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item svg {
+    color: inherit !important;
+    fill: currentColor !important;
+}
+
+body.cfe-theme-applied #global_nav .menu-item:hover,
+body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item:hover,
+body.cfe-theme-applied #global_nav .menu-item a:hover,
+body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item a:hover,
+body.cfe-theme-applied #global_nav .menu-item--active,
+body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item--active,
+body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item--active a {
+    background: var(--cfe-nav-hover-bg) !important;
+    color: var(--cfe-nav-text) !important;
+}
 body.cfe-theme-applied #section-tabs {
     background: transparent !important;
     border: none !important;
@@ -326,7 +353,29 @@ body.cfe-theme-applied #section-tabs .section .icon-mini-solid {
     color: var(--cfe-muted) !important;
 }
 
-body.cfe-theme-applied .ic-app-nav-toggle-and-crumbs,\r\nbody.cfe-theme-applied .ic-app-crumbs,\r\nbody.cfe-theme-applied .ic-app-crumbs__crumbs,\r\nbody.cfe-theme-applied .ic-app-crumbs__crumbs li {\r\n    background: transparent !important;\r\n    border: none !important;\r\n    box-shadow: none !important;\r\n}\r\n\r\nbody.cfe-theme-applied .ic-app-crumbs__crumbs a {\r\n    background: transparent !important;\r\n    color: var(--cfe-text) !important;\r\n}\r\n\r\nbody.cfe-theme-applied .ic-app-crumbs__crumb,\r\nbody.cfe-theme-applied .ic-app-crumbs__crumb a,\r\nbody.cfe-theme-applied .ic-app-crumbs__crumb button,\r\nbody.cfe-theme-applied .ic-app-crumbs__separator {\r\n    background: transparent !important;\r\n    border: none !important;\r\n    box-shadow: none !important;\r\n    color: var(--cfe-text) !important;\r\n}\r\n
+body.cfe-theme-applied .ic-app-nav-toggle-and-crumbs,
+body.cfe-theme-applied .ic-app-crumbs,
+body.cfe-theme-applied .ic-app-crumbs__crumbs,
+body.cfe-theme-applied .ic-app-crumbs__crumbs li {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+body.cfe-theme-applied .ic-app-crumbs__crumbs a {
+    background: transparent !important;
+    color: var(--cfe-text) !important;
+}
+
+body.cfe-theme-applied .ic-app-crumbs__crumb,
+body.cfe-theme-applied .ic-app-crumbs__crumb a,
+body.cfe-theme-applied .ic-app-crumbs__crumb button,
+body.cfe-theme-applied .ic-app-crumbs__separator {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--cfe-text) !important;
+}
 body.cfe-theme-applied .ic-NavMenu__primary .ic-NavMenu__item:hover,
 body.cfe-theme-applied .ic-NavMenu__primary .ic-NavMenu__item a:hover {
     background: var(--cfe-hover) !important;
@@ -4095,4 +4144,934 @@ body.cfe-theme-applied li > a > span.ellipsible * {
     padding: 10px 14px;
     font-weight: 700;
     cursor: pointer;
+}
+
+/* === QuickCanvas 0.5 — coherent workspace system ========================= */
+
+:root {
+    --cfe-success: #38724c;
+    --cfe-success-soft: #eaf4ed;
+    --cfe-warning: #8a6119;
+    --cfe-warning-soft: #fff3db;
+    --cfe-danger: #a43f3f;
+    --cfe-danger-soft: #faeaea;
+    --cfe-focus: #77b7df;
+    --cfe-control-height: 38px;
+    --cfe-shadow-soft: 0 8px 24px rgba(26, 35, 46, 0.06);
+}
+
+body.cfe-theme-applied {
+    background: var(--cfe-bg) !important;
+    color: var(--cfe-text) !important;
+    font-family: var(--cfe-font-body) !important;
+    line-height: 1.45;
+}
+
+body.cfe-theme-applied :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid var(--cfe-focus) !important;
+    outline-offset: 2px !important;
+}
+
+body.cfe-theme-applied :where(button, a, input, select, textarea) {
+    transition:
+        color 0.18s ease,
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease !important;
+}
+
+/* Global navigation: visually distinct from the course and content layers. */
+body.cfe-theme-applied #global_nav,
+body.cfe-theme-applied #global_nav .ic-app-header__main-navigation,
+body.cfe-theme-applied #global_nav .ic-app-header__primary,
+body.cfe-theme-applied #global_nav .ic-app-header__secondary-navigation,
+body.cfe-theme-applied #global_nav .ic-app-header__logo-container,
+body.cfe-theme-applied #global_nav .ic-app-header__logo-link,
+body.cfe-theme-applied #global_nav .ic-app-header__logomark {
+    background: var(--cfe-nav-bg) !important;
+    border-color: var(--cfe-nav-divider) !important;
+    box-shadow: none !important;
+}
+
+body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"],
+body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"] *,
+body.cfe-theme-applied #global_nav .menu-item,
+body.cfe-theme-applied #global_nav .menu-item *,
+body.cfe-theme-applied #global_nav #primaryNavToggle,
+body.cfe-theme-applied #global_nav #primaryNavToggle * {
+    color: var(--cfe-nav-muted) !important;
+    -webkit-text-fill-color: var(--cfe-nav-muted) !important;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+    text-shadow: none !important;
+    opacity: 1 !important;
+}
+
+body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"]:hover,
+body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"]:focus-visible,
+body.cfe-theme-applied #global_nav .menu-item:hover,
+body.cfe-theme-applied #global_nav .menu-item--active {
+    background: var(--cfe-nav-hover-bg) !important;
+}
+
+body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"]:hover *,
+body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"]:focus-visible *,
+body.cfe-theme-applied #global_nav .menu-item:hover *,
+body.cfe-theme-applied #global_nav .menu-item--active * {
+    color: var(--cfe-nav-text) !important;
+    -webkit-text-fill-color: var(--cfe-nav-text) !important;
+}
+
+body.cfe-theme-applied #global_nav .menu-item--active,
+body.cfe-theme-applied #global_nav [aria-current="page"] {
+    box-shadow: inset 4px 0 0 var(--cfe-nav-text) !important;
+}
+
+/* Course navigation: the middle visual layer. */
+body.cfe-theme-applied.cfe-page-course #left-side,
+body.cfe-theme-applied.cfe-page-course .ic-Layout-aside:first-of-type {
+    background: var(--cfe-surface-alt) !important;
+    border-right: 1px solid var(--cfe-divider) !important;
+}
+
+body.cfe-theme-applied #section-tabs {
+    padding: 8px !important;
+    background: var(--cfe-surface-alt) !important;
+    border: 0 !important;
+    border-radius: var(--cfe-radius) !important;
+}
+
+body.cfe-theme-applied #section-tabs .section,
+body.cfe-theme-applied #section-tabs .section a {
+    position: relative;
+    min-height: 38px;
+    display: flex !important;
+    align-items: center;
+    border: 0 !important;
+    border-radius: var(--cfe-radius-sm) !important;
+    background: transparent !important;
+    color: var(--cfe-muted) !important;
+    box-shadow: none !important;
+    font-weight: 500;
+}
+
+body.cfe-theme-applied #section-tabs .section:hover,
+body.cfe-theme-applied #section-tabs .section a:hover {
+    background: var(--cfe-hover) !important;
+    color: var(--cfe-text) !important;
+}
+
+body.cfe-theme-applied #section-tabs .section.active,
+body.cfe-theme-applied #section-tabs .section.active a,
+body.cfe-theme-applied #section-tabs .section[aria-current="page"],
+body.cfe-theme-applied #section-tabs .section[aria-current="page"] a {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-accent-strong) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+    font-weight: 650;
+}
+
+body.cfe-theme-applied #section-tabs .section.active::before,
+body.cfe-theme-applied #section-tabs .section[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    inset: 8px auto 8px 0;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--cfe-accent);
+    z-index: 1;
+}
+
+/* Breadcrumbs and top path. */
+body.cfe-theme-applied .ic-app-nav-toggle-and-crumbs,
+body.cfe-theme-applied .ic-app-crumbs,
+body.cfe-theme-applied .ic-app-crumbs__crumbs,
+body.cfe-theme-applied #breadcrumbs,
+body.cfe-theme-applied .breadcrumbs {
+    background: var(--cfe-surface) !important;
+    border-color: var(--cfe-divider) !important;
+    box-shadow: none !important;
+}
+
+body.cfe-theme-applied .ic-app-crumbs__crumbs li > a,
+body.cfe-theme-applied .ic-app-crumbs__crumbs li > a *,
+body.cfe-theme-applied #breadcrumbs li > a,
+body.cfe-theme-applied #breadcrumbs li > a *,
+body.cfe-theme-applied .breadcrumbs li > a,
+body.cfe-theme-applied .breadcrumbs li > a * {
+    color: var(--cfe-muted) !important;
+    -webkit-text-fill-color: var(--cfe-muted) !important;
+}
+
+body.cfe-theme-applied .ic-app-crumbs__crumbs li > a:hover,
+body.cfe-theme-applied #breadcrumbs li > a:hover,
+body.cfe-theme-applied .breadcrumbs li > a:hover {
+    color: var(--cfe-accent) !important;
+}
+
+/* Main content hierarchy. */
+body.cfe-theme-applied:not(.cfe-page-dashboard) :where(
+    .ic-Layout-mainContent,
+    .ic-Layout-contentMain,
+    #content,
+    #main
+) {
+    color: var(--cfe-text) !important;
+}
+
+body.cfe-theme-applied:not(.cfe-quiz-page) :where(
+    #content h1,
+    #content .page-title,
+    .ic-Layout-contentMain h1,
+    .ic-Action-header__Heading
+) {
+    color: var(--cfe-text) !important;
+    font-family: var(--cfe-font-head) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.025em;
+}
+
+body.cfe-theme-applied:not(.cfe-quiz-page) :where(
+    #content h2,
+    #content h3,
+    .ic-Layout-contentMain h2,
+    .ic-Layout-contentMain h3
+) {
+    color: var(--cfe-text) !important;
+    font-family: var(--cfe-font-body) !important;
+    letter-spacing: -0.01em;
+}
+
+body.cfe-theme-applied .ic-Action-header,
+body.cfe-theme-applied .ic-Action-header__Primary,
+body.cfe-theme-applied .ic-Action-header__Secondary {
+    background: transparent !important;
+    border-color: var(--cfe-divider) !important;
+    box-shadow: none !important;
+}
+
+/* Unified controls. */
+body.cfe-theme-applied :where(.Button, .btn, button):not(.tox-tbtn):not(.ui-datepicker-trigger) {
+    min-height: var(--cfe-control-height);
+    border-radius: var(--cfe-radius-sm) !important;
+    border-color: var(--cfe-border) !important;
+    box-shadow: none !important;
+    font-family: var(--cfe-font-body) !important;
+    font-weight: 600;
+    text-shadow: none !important;
+}
+
+body.cfe-theme-applied :where(.Button, .btn):not(.Button--primary):not(.btn-primary) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+}
+
+body.cfe-theme-applied :where(.Button, .btn):not(.Button--primary):not(.btn-primary):hover {
+    background: var(--cfe-hover) !important;
+    border-color: var(--cfe-accent) !important;
+    color: var(--cfe-accent) !important;
+}
+
+body.cfe-theme-applied :where(.Button--primary, .btn-primary) {
+    background: var(--cfe-accent) !important;
+    border-color: var(--cfe-accent) !important;
+    color: var(--cfe-accent-contrast) !important;
+    -webkit-text-fill-color: var(--cfe-accent-contrast) !important;
+}
+
+body.cfe-theme-applied :where(.Button--primary, .btn-primary):hover {
+    background: var(--cfe-accent-strong) !important;
+    border-color: var(--cfe-accent-strong) !important;
+}
+
+body.cfe-theme-applied :where(.Button--danger, .btn-danger, [class*="danger"]):not([class*="dangerously"]) {
+    --cfe-control-danger: var(--cfe-danger);
+}
+
+body.cfe-theme-applied :where(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+    min-height: var(--cfe-control-height);
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border: 1px solid var(--cfe-border) !important;
+    border-radius: var(--cfe-radius-sm) !important;
+    box-shadow: none !important;
+    font-family: var(--cfe-font-body) !important;
+}
+
+body.cfe-theme-applied :where(input, select, textarea):not([type="checkbox"]):not([type="radio"]):focus {
+    border-color: var(--cfe-accent) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cfe-accent) 16%, transparent) !important;
+}
+
+body.cfe-theme-applied :where(input[type="checkbox"], input[type="radio"]) {
+    accent-color: var(--cfe-accent);
+}
+
+/* Shared surfaces, tables, and side panels. */
+body.cfe-theme-applied:not(.cfe-quiz-page) :where(
+    .ic-Layout-aside__content,
+    #right-side .rs-section,
+    .right-side .rs-section,
+    .ui-dialog,
+    [role="dialog"],
+    .ReactModal__Content
+) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border: 1px solid var(--cfe-border) !important;
+    border-radius: var(--cfe-radius-lg) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+}
+
+body.cfe-theme-applied:not(.cfe-quiz-page) :where(table, .ic-Table) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border-color: var(--cfe-divider) !important;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+body.cfe-theme-applied:not(.cfe-quiz-page) :where(thead, .ic-Table__header-row, th) {
+    background: var(--cfe-surface-alt) !important;
+    color: var(--cfe-muted) !important;
+    border-color: var(--cfe-divider) !important;
+    font-size: 0.78rem;
+    font-weight: 650;
+    letter-spacing: 0.035em;
+}
+
+body.cfe-theme-applied:not(.cfe-quiz-page) :where(tbody tr, .ic-Table__row) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+}
+
+body.cfe-theme-applied:not(.cfe-quiz-page) :where(tbody tr, .ic-Table__row):hover {
+    background: var(--cfe-hover) !important;
+}
+
+body.cfe-theme-applied:not(.cfe-quiz-page) :where(td, th, .ic-Table__cell) {
+    border-color: var(--cfe-divider) !important;
+}
+
+/* Modules. */
+body.cfe-theme-applied.cfe-page-modules #context_modules {
+    display: grid;
+    gap: 16px;
+}
+
+body.cfe-theme-applied.cfe-page-modules #context_modules :where(
+    .item-group-container,
+    .item-group-condensed,
+    .grouping
+) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border: 1px solid var(--cfe-border) !important;
+    border-radius: var(--cfe-radius) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+    overflow: hidden;
+}
+
+body.cfe-theme-applied.cfe-page-modules #context_modules :where(.ig-header, .item-group-header) {
+    min-height: 56px;
+    background: var(--cfe-surface-alt) !important;
+    color: var(--cfe-text) !important;
+    border-color: var(--cfe-divider) !important;
+}
+
+body.cfe-theme-applied.cfe-page-modules #context_modules .ig-row {
+    min-height: 48px;
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border-color: var(--cfe-divider) !important;
+}
+
+body.cfe-theme-applied.cfe-page-modules #context_modules .ig-row:hover {
+    background: var(--cfe-hover) !important;
+}
+
+body.cfe-theme-applied.cfe-page-modules #context_modules :where(.published-status, .publish-icon) {
+    color: var(--cfe-success) !important;
+}
+
+/* Assignments and submissions. */
+body.cfe-theme-applied.cfe-page-assignments :where(
+    .assignment_group,
+    .assignment-list,
+    .assignment-list-item,
+    .assignment_summary,
+    .submit_assignment,
+    #submit_assignment
+) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border-color: var(--cfe-border) !important;
+}
+
+body.cfe-theme-applied.cfe-page-assignments :where(.assignment_group, .assignment_summary, .submit_assignment, #submit_assignment) {
+    border-radius: var(--cfe-radius-lg) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+}
+
+body.cfe-theme-applied.cfe-page-assignments :where(.assignment-list-item, .ig-row) {
+    min-height: 52px;
+    border-color: var(--cfe-divider) !important;
+}
+
+body.cfe-theme-applied.cfe-page-assignments :where(.assignment-list-item, .ig-row):hover {
+    background: var(--cfe-hover) !important;
+}
+
+body.cfe-theme-applied.cfe-page-assignments :where(.submission_type_tab.selected, [aria-selected="true"]) {
+    background: var(--cfe-accent-soft) !important;
+    color: var(--cfe-accent-strong) !important;
+    border-color: var(--cfe-accent) !important;
+}
+
+/* Discussions. */
+body.cfe-theme-applied.cfe-page-discussions :where(
+    .discussion-topic,
+    .discussion_entry,
+    .discussion-reply-box,
+    .discussion-redesign-layout,
+    [data-testid*="discussion"]
+) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border-color: var(--cfe-border) !important;
+}
+
+body.cfe-theme-applied.cfe-page-discussions :where(.discussion-topic, .discussion_entry) {
+    border-radius: var(--cfe-radius) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+}
+
+body.cfe-theme-applied.cfe-page-discussions :where(.unread, [data-testid*="unread"]) {
+    background: var(--cfe-accent-soft) !important;
+    color: var(--cfe-accent-strong) !important;
+}
+
+/* Grades. */
+body.cfe-theme-applied.cfe-page-grades :where(#grades_summary, .gradebook, .student-grades, .outcome-gradebook-container) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border: 1px solid var(--cfe-border) !important;
+    border-radius: var(--cfe-radius-lg) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+    overflow: hidden;
+}
+
+body.cfe-theme-applied.cfe-page-grades :where(.final_grade, .grade, [class*="score"]) {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Calendar. */
+body.cfe-theme-applied.cfe-page-calendar :where(#calendar-app, .calendar, .fc-view, .fc-scrollgrid) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border-color: var(--cfe-border) !important;
+}
+
+body.cfe-theme-applied.cfe-page-calendar :where(.fc-view, .fc-scrollgrid) {
+    border-radius: var(--cfe-radius-lg) !important;
+    overflow: hidden;
+    box-shadow: var(--cfe-shadow-soft) !important;
+}
+
+body.cfe-theme-applied.cfe-page-calendar :where(.fc-col-header-cell, .fc-day-header, .fc-widget-header) {
+    background: var(--cfe-surface-alt) !important;
+    color: var(--cfe-muted) !important;
+    border-color: var(--cfe-divider) !important;
+}
+
+body.cfe-theme-applied.cfe-page-calendar :where(.fc-day, .fc-daygrid-day, .fc-widget-content) {
+    background: var(--cfe-surface) !important;
+    border-color: var(--cfe-divider) !important;
+}
+
+body.cfe-theme-applied.cfe-page-calendar :where(.fc-day-today, .fc-today) {
+    background: var(--cfe-accent-soft) !important;
+    box-shadow: inset 0 0 0 1px var(--cfe-accent) !important;
+}
+
+body.cfe-theme-applied.cfe-page-calendar :where(.fc-event, .calendar-event) {
+    border-radius: var(--cfe-radius-sm) !important;
+    box-shadow: none !important;
+}
+
+/* Settings and account tables. */
+body.cfe-theme-applied.cfe-page-settings :where(
+    .form-horizontal,
+    .formtable,
+    .feature-flag-wrapper,
+    #access_tokens_holder,
+    #access_tokens,
+    .profile-edit-form
+) {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border-color: var(--cfe-border) !important;
+}
+
+body.cfe-theme-applied.cfe-page-settings :where(.form-horizontal, .feature-flag-wrapper, #access_tokens_holder, .profile-edit-form) {
+    border-radius: var(--cfe-radius-lg) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+}
+
+/* Quiz pages stay conservative. This block intentionally wins at EOF. */
+body.cfe-theme-applied.cfe-quiz-page :where(
+    .quiz-submission,
+    .quiz_score,
+    .question,
+    .display_question,
+    .question_holder,
+    .question_text,
+    .answers,
+    .answer,
+    .user_content
+) {
+    background-color: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border-color: var(--cfe-border) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+body.cfe-theme-applied.cfe-quiz-page :where(
+    .quiz-submission,
+    .quiz_score,
+    .question,
+    .display_question,
+    .question_holder,
+    .question_text,
+    .answers,
+    .answer,
+    .user_content
+) * {
+    -webkit-text-fill-color: currentColor !important;
+}
+
+/* Dashboard — approved movable-widget workspace. */
+body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
+    background: var(--cfe-bg) !important;
+}
+
+#cfe-dashboard {
+    width: min(1440px, calc(100% - 132px)) !important;
+    margin: 24px auto 48px 104px !important;
+    padding: 8px 0 32px !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+#cfe-dashboard .cfe-header {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin: 0 0 20px !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+#cfe-dashboard .cfe-dashboard-kicker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 7px;
+    color: var(--cfe-accent);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+#cfe-dashboard .cfe-dashboard-kicker span {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--cfe-success);
+}
+
+#cfe-dashboard h2 {
+    margin: 0 0 5px !important;
+    color: var(--cfe-text) !important;
+    font-family: var(--cfe-font-head) !important;
+    font-size: clamp(26px, 2.4vw, 36px) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
+}
+
+#cfe-dashboard .cfe-header > div:first-child > p {
+    max-width: 620px;
+    color: var(--cfe-muted) !important;
+    font-size: 14px;
+}
+
+#cfe-dashboard .cfe-actions {
+    width: 100%;
+    margin-top: 104px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--cfe-surface);
+    border: 1px solid var(--cfe-border);
+    border-radius: var(--cfe-radius-lg);
+    box-shadow: var(--cfe-shadow-soft);
+}
+
+#cfe-dashboard .cfe-actions > button {
+    min-height: 36px;
+    padding: 8px 14px;
+}
+
+#cfe-dashboard .cfe-actions .cfe-edit-layout,
+#cfe-dashboard .cfe-actions .cfe-refresh {
+    position: absolute;
+    top: 0;
+    min-height: 38px;
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border: 1px solid var(--cfe-border) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+}
+
+#cfe-dashboard .cfe-actions .cfe-edit-layout {
+    right: 54px;
+}
+
+#cfe-dashboard .cfe-actions .cfe-refresh {
+    right: 0;
+    width: 42px;
+    overflow: hidden;
+    color: transparent !important;
+    font-size: 0;
+}
+
+#cfe-dashboard .cfe-actions .cfe-refresh::before {
+    content: "↻";
+    display: grid;
+    place-items: center;
+    color: var(--cfe-muted);
+    font-size: 18px;
+}
+
+#cfe-dashboard .cfe-filter {
+    min-height: 36px;
+    background: transparent !important;
+    color: var(--cfe-muted) !important;
+    border-color: transparent !important;
+}
+
+#cfe-dashboard .cfe-filter:hover {
+    background: var(--cfe-hover) !important;
+    color: var(--cfe-text) !important;
+}
+
+#cfe-dashboard .cfe-filter.is-active,
+#cfe-dashboard .cfe-filter[data-filter="nextdue"] {
+    background: var(--cfe-accent) !important;
+    color: var(--cfe-accent-contrast) !important;
+    border-color: var(--cfe-accent) !important;
+}
+
+#cfe-dashboard .cfe-date-range-tools {
+    margin-left: auto;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    background: transparent !important;
+    border: 0 !important;
+}
+
+#cfe-dashboard .cfe-date-range-label {
+    width: auto;
+    max-width: 120px;
+    color: var(--cfe-muted) !important;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+#cfe-dashboard .cfe-date-range-inputs {
+    flex-wrap: nowrap;
+}
+
+#cfe-dashboard .cfe-date-filter {
+    min-width: 132px !important;
+    height: 36px;
+    padding: 6px 9px !important;
+    background: var(--cfe-surface) !important;
+}
+
+#cfe-dashboard .cfe-widget-dock {
+    margin: 0 0 18px !important;
+    padding: 14px;
+    background: var(--cfe-accent-soft);
+    border: 1px dashed var(--cfe-accent);
+    border-radius: var(--cfe-radius-lg);
+}
+
+#cfe-dashboard .cfe-widget-chip {
+    min-height: 32px;
+    padding: 6px 11px !important;
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border: 1px solid var(--cfe-border) !important;
+    box-shadow: none !important;
+}
+
+#cfe-dashboard .cfe-widget-canvas,
+#cfe-dashboard.cfe-snap-off .cfe-widget-canvas {
+    display: block !important;
+    position: relative;
+    min-height: 900px;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+
+#cfe-dashboard.cfe-layout-edit-mode .cfe-widget-canvas {
+    padding: 16px !important;
+    background-color: color-mix(in srgb, var(--cfe-accent-soft) 42%, transparent) !important;
+    background-image: radial-gradient(
+        circle at 1px 1px,
+        color-mix(in srgb, var(--cfe-accent) 30%, transparent) 1px,
+        transparent 1.2px
+    ) !important;
+    background-size: 16px 16px !important;
+    border: 1px dashed var(--cfe-accent) !important;
+    border-radius: var(--cfe-radius-lg) !important;
+}
+
+#cfe-dashboard .cfe-dashboard-widget,
+#cfe-dashboard.cfe-snap-off .cfe-dashboard-widget {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border: 1px solid color-mix(in srgb, var(--cfe-border) 86%, transparent) !important;
+    border-radius: var(--cfe-radius-lg) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+}
+
+#cfe-dashboard .cfe-card,
+#cfe-dashboard .cfe-widget {
+    padding: 18px !important;
+    gap: 12px;
+}
+
+#cfe-dashboard .cfe-card h3,
+#cfe-dashboard .cfe-widget h3,
+#cfe-dashboard .cfe-progress-title {
+    margin: 0 !important;
+    color: var(--cfe-text) !important;
+    font-family: var(--cfe-font-body) !important;
+    font-size: 15px !important;
+    font-weight: 650 !important;
+    letter-spacing: -0.01em !important;
+    text-transform: none !important;
+    opacity: 1 !important;
+}
+
+#cfe-dashboard .cfe-item,
+#cfe-dashboard .cfe-task-row,
+#cfe-dashboard .cfe-personal-row {
+    min-height: 48px;
+    padding: 10px !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--cfe-divider) !important;
+    border-radius: 0 !important;
+}
+
+#cfe-dashboard .cfe-item:hover,
+#cfe-dashboard .cfe-task-row:hover,
+#cfe-dashboard .cfe-personal-row:hover {
+    background: var(--cfe-hover) !important;
+}
+
+#cfe-dashboard .cfe-link,
+#cfe-dashboard .cfe-task-title,
+#cfe-dashboard .cfe-personal-title {
+    color: var(--cfe-text) !important;
+    font-weight: 600;
+}
+
+#cfe-dashboard .cfe-muted,
+#cfe-dashboard .cfe-task-meta,
+#cfe-dashboard .cfe-personal-meta,
+#cfe-dashboard .cfe-right,
+#cfe-dashboard .cfe-legend-meta {
+    color: var(--cfe-muted) !important;
+}
+
+#cfe-dashboard .cfe-tabs {
+    padding: 3px !important;
+    gap: 2px !important;
+    background: var(--cfe-surface-alt) !important;
+    border-radius: 999px !important;
+}
+
+#cfe-dashboard .cfe-tab {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 7px !important;
+    color: var(--cfe-muted) !important;
+    background: transparent !important;
+    border: 0 !important;
+}
+
+#cfe-dashboard .cfe-tab.is-active {
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-accent) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+}
+
+#cfe-dashboard .cfe-quick-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#cfe-dashboard .cfe-quick-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    background: var(--cfe-surface-alt) !important;
+    border: 0 !important;
+    color: var(--cfe-text) !important;
+    font-weight: 550;
+}
+
+#cfe-dashboard .cfe-filterbar-widget .cfe-filterbar-buttons {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#cfe-dashboard .cfe-filterbar-widget .cfe-filterbar-btn {
+    width: 100%;
+    min-width: 0;
+    background: var(--cfe-surface) !important;
+    color: var(--cfe-text) !important;
+    border: 1px solid var(--cfe-border) !important;
+}
+
+#cfe-dashboard .cfe-filterbar-widget .cfe-filterbar-btn.is-active,
+#cfe-dashboard .cfe-filterbar-widget .cfe-filterbar-btn[data-filter="nextdue"] {
+    background: var(--cfe-accent) !important;
+    color: var(--cfe-accent-contrast) !important;
+    border-color: var(--cfe-accent) !important;
+}
+
+#cfe-dashboard .cfe-personal-controls {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+}
+
+#cfe-dashboard .cfe-personal-controls #cfe-personal-date {
+    grid-column: 1 / -1;
+}
+
+#cfe-dashboard .cfe-personal-controls .cfe-button {
+    min-height: 40px;
+    background: var(--cfe-accent) !important;
+    color: var(--cfe-accent-contrast) !important;
+}
+
+#cfe-dashboard .cfe-progress-card .cfe-multi-ring {
+    padding-top: 8px;
+}
+
+#cfe-dashboard .cfe-ring-bg {
+    stroke: color-mix(in srgb, var(--cfe-border) 70%, var(--cfe-accent-soft)) !important;
+}
+
+#cfe-dashboard .cfe-legend-row {
+    min-height: 28px;
+}
+
+#cfe-dashboard.cfe-layout-edit-mode .cfe-dashboard-widget {
+    border-color: color-mix(in srgb, var(--cfe-accent) 48%, var(--cfe-border)) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--cfe-accent) 10%, transparent) !important;
+}
+
+#cfe-dashboard.cfe-layout-edit-mode .cfe-widget-drag-handle,
+#cfe-dashboard.cfe-layout-edit-mode .cfe-widget-trash {
+    min-height: 28px;
+    padding: 4px 9px !important;
+    background: var(--cfe-surface) !important;
+    border: 1px solid var(--cfe-border) !important;
+    color: var(--cfe-muted) !important;
+    box-shadow: var(--cfe-shadow-soft) !important;
+}
+
+#cfe-dashboard.cfe-layout-edit-mode .cfe-widget-trash:hover {
+    background: var(--cfe-danger-soft) !important;
+    border-color: var(--cfe-danger) !important;
+    color: var(--cfe-danger) !important;
+}
+
+@media (max-width: 1180px) {
+    #cfe-dashboard {
+        width: calc(100% - 112px) !important;
+        margin-left: 96px !important;
+    }
+
+    #cfe-dashboard .cfe-actions {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    #cfe-dashboard .cfe-date-range-tools {
+        width: 100%;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    #cfe-dashboard {
+        width: calc(100% - 24px) !important;
+        margin: 12px !important;
+    }
+
+    #cfe-dashboard .cfe-header {
+        display: block;
+    }
+
+    #cfe-dashboard .cfe-actions {
+        margin-top: 72px;
+    }
+
+    #cfe-dashboard .cfe-actions .cfe-edit-layout {
+        left: 0;
+        right: auto;
+    }
+
+    #cfe-dashboard .cfe-date-range-tools,
+    #cfe-dashboard .cfe-date-range-inputs {
+        display: grid;
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    #cfe-dashboard .cfe-date-filter {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.cfe-theme-applied *,
+    body.cfe-theme-applied *::before,
+    body.cfe-theme-applied *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

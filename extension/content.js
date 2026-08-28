@@ -116,16 +116,33 @@
   }
 
   function syncPageTypeClasses(pathname = window.location.pathname || "/") {
-    const isQuizPage = isQuizLikePath(pathname);
-    document.documentElement.classList.toggle("cfe-quiz-page", isQuizPage);
+    const path = String(pathname || "/").toLowerCase();
+    const pageTypes = {
+      "cfe-page-dashboard": isDashboardPath(path),
+      "cfe-page-course": /\/courses\/\d+(\/|$)/.test(path),
+      "cfe-page-modules": /\/courses\/\d+\/modules(\/|$)/.test(path),
+      "cfe-page-assignments": /\/courses\/\d+\/assignments(\/|$)/.test(path),
+      "cfe-page-grades": /\/(grades|gradebook)(\/|$)/.test(path),
+      "cfe-page-discussions": /\/(discussion_topics|discussions)(\/|$)/.test(path),
+      "cfe-page-calendar": path === "/calendar" || path.startsWith("/calendar/"),
+      "cfe-page-settings": /\/(settings|profile|accounts)(\/|$)/.test(path),
+      "cfe-quiz-page": isQuizLikePath(path),
+    };
+    const applyClasses = (target) => {
+      if (!target) return;
+      Object.entries(pageTypes).forEach(([className, enabled]) => {
+        target.classList.toggle(className, enabled);
+      });
+    };
+    applyClasses(document.documentElement);
     if (document.body) {
-      document.body.classList.toggle("cfe-quiz-page", isQuizPage);
+      applyClasses(document.body);
       return;
     }
     document.addEventListener(
       "DOMContentLoaded",
       () => {
-        document.body?.classList.toggle("cfe-quiz-page", isQuizPage);
+        applyClasses(document.body);
       },
       { once: true },
     );
@@ -947,20 +964,20 @@
     );
     const navBg =
       mode === "dark"
-        ? mixColors(surface, bg, 0.16)
-        : mixColors(surface, bg, 0.28);
-    const navText = ensureMinContrast(text, navBg, 7, mode);
-    const navMuted = ensureMinContrast(muted, navBg, 4.8, mode);
+        ? mixColors(surface, "#000000", 0.2)
+        : mixColors(accent, "#102431", 0.68);
+    const navText = ensureMinContrast("#ffffff", navBg, 7, "dark");
+    const navMuted = ensureMinContrast("#b8c7d0", navBg, 4.8, "dark");
     const navHoverBg =
       mode === "dark"
         ? mixColors(navBg, "#ffffff", 0.1)
-        : mixColors(navBg, "#000000", 0.06);
+        : mixColors(navBg, "#ffffff", 0.1);
     const navActiveBg =
       mode === "dark"
         ? mixColors(accent, navBg, 0.72)
         : mixColors(accent, navBg, 0.84);
-    const navActiveText = ensureMinContrast(navText, navActiveBg, 4.8, mode);
-    const navDivider = ensureMinContrast(border, navBg, 1.7, mode);
+    const navActiveText = ensureMinContrast(navText, navActiveBg, 4.8, "dark");
+    const navDivider = ensureMinContrast(border, navBg, 1.7, "dark");
     rootStyle.setProperty("--cfe-nav-bg", navBg);
     rootStyle.setProperty("--cfe-nav-text", navText);
     rootStyle.setProperty("--cfe-nav-muted", navMuted);
@@ -968,6 +985,13 @@
     rootStyle.setProperty("--cfe-nav-active-bg", navActiveBg);
     rootStyle.setProperty("--cfe-nav-active-text", navActiveText);
     rootStyle.setProperty("--cfe-nav-divider", navDivider);
+    rootStyle.setProperty("--cfe-success", mode === "dark" ? "#7cc394" : "#38724c");
+    rootStyle.setProperty("--cfe-success-soft", mode === "dark" ? "#183a27" : "#eaf4ed");
+    rootStyle.setProperty("--cfe-warning", mode === "dark" ? "#f0c46d" : "#8a6119");
+    rootStyle.setProperty("--cfe-warning-soft", mode === "dark" ? "#463719" : "#fff3db");
+    rootStyle.setProperty("--cfe-danger", mode === "dark" ? "#f08d8d" : "#a43f3f");
+    rootStyle.setProperty("--cfe-danger-soft", mode === "dark" ? "#482222" : "#faeaea");
+    rootStyle.setProperty("--cfe-focus", mixColors(accent, mode === "dark" ? "#ffffff" : "#8fd3ff", 0.45));
     rootStyle.setProperty("--cfe-font-body", fontBody);
     rootStyle.setProperty("--cfe-font-head", fontHead);
 
@@ -1104,20 +1128,20 @@
     );
     const navBg =
       mode === "dark"
-        ? mixColors(surface, bg, 0.16)
-        : mixColors(surface, bg, 0.28);
-    const navText = ensureMinContrast(text, navBg, 7, mode);
-    const navMuted = ensureMinContrast(muted, navBg, 4.8, mode);
+        ? mixColors(surface, "#000000", 0.2)
+        : mixColors(accent, "#102431", 0.68);
+    const navText = ensureMinContrast("#ffffff", navBg, 7, "dark");
+    const navMuted = ensureMinContrast("#b8c7d0", navBg, 4.8, "dark");
     const navHoverBg =
       mode === "dark"
         ? mixColors(navBg, "#ffffff", 0.1)
-        : mixColors(navBg, "#000000", 0.06);
+        : mixColors(navBg, "#ffffff", 0.1);
     const navActiveBg =
       mode === "dark"
         ? mixColors(accent, navBg, 0.72)
         : mixColors(accent, navBg, 0.84);
-    const navActiveText = ensureMinContrast(navText, navActiveBg, 4.8, mode);
-    const navDivider = ensureMinContrast(border, navBg, 1.7, mode);
+    const navActiveText = ensureMinContrast(navText, navActiveBg, 4.8, "dark");
+    const navDivider = ensureMinContrast(border, navBg, 1.7, "dark");
     rootStyle.setProperty("--cfe-nav-bg", navBg);
     rootStyle.setProperty("--cfe-nav-text", navText);
     rootStyle.setProperty("--cfe-nav-muted", navMuted);
@@ -1125,6 +1149,13 @@
     rootStyle.setProperty("--cfe-nav-active-bg", navActiveBg);
     rootStyle.setProperty("--cfe-nav-active-text", navActiveText);
     rootStyle.setProperty("--cfe-nav-divider", navDivider);
+    rootStyle.setProperty("--cfe-success", mode === "dark" ? "#7cc394" : "#38724c");
+    rootStyle.setProperty("--cfe-success-soft", mode === "dark" ? "#183a27" : "#eaf4ed");
+    rootStyle.setProperty("--cfe-warning", mode === "dark" ? "#f0c46d" : "#8a6119");
+    rootStyle.setProperty("--cfe-warning-soft", mode === "dark" ? "#463719" : "#fff3db");
+    rootStyle.setProperty("--cfe-danger", mode === "dark" ? "#f08d8d" : "#a43f3f");
+    rootStyle.setProperty("--cfe-danger-soft", mode === "dark" ? "#482222" : "#faeaea");
+    rootStyle.setProperty("--cfe-focus", mixColors(accent, mode === "dark" ? "#ffffff" : "#8fd3ff", 0.45));
     rootStyle.setProperty("--cfe-font-body", fontBody);
     rootStyle.setProperty("--cfe-font-head", fontHead);
 
@@ -2749,8 +2780,9 @@
       container.innerHTML = `
         <div class="cfe-header">
           <div>
-            <h2>Assignments</h2>
-            <p>Due by next due date, this week, or this month.</p>
+            <div class="cfe-dashboard-kicker"><span aria-hidden="true"></span>Everything is up to date</div>
+            <h2>Your learning dashboard</h2>
+            <p>Assignments, course activity, and personal plans in one flexible workspace.</p>
           </div>
           <div class="cfe-actions">
             <button class="cfe-edit-layout" type="button">Edit layout</button>
@@ -3029,28 +3061,52 @@
     const apiResponseCache = new Map();
     const apiInFlightRequests = new Map();
     const dashboardWidgetDefaults = {
-      order: ["assignments", "progress", "tasks", "personal"],
+      order: [
+        "assignments",
+        "progress",
+        "tasks",
+        "personal",
+        "filterbar",
+        "quicklinks",
+        "eventsmini",
+        "announcementsmini",
+      ],
     };
     const dashboardLayoutDefaults = {
-      order: ["assignments", "progress", "tasks", "personal", "filterbar"],
+      order: [
+        "assignments",
+        "progress",
+        "tasks",
+        "personal",
+        "filterbar",
+        "quicklinks",
+        "eventsmini",
+        "announcementsmini",
+      ],
       snapToFit: false,
-      filterBarLayout: "vertical",
+      filterBarLayout: "horizontal",
       positions: {
-        assignments: { left: 408, top: 720 },
-        progress: { left: 400, top: 20 },
-        tasks: { left: 24, top: 24 },
-        personal: { left: 408, top: 504 },
-        filterbar: { left: 744, top: 24 },
+        assignments: { left: 0, top: 0 },
+        progress: { left: 780, top: 0 },
+        tasks: { left: 0, top: 340 },
+        personal: { left: 640, top: 340 },
+        filterbar: { left: 960, top: 340 },
+        quicklinks: { left: 0, top: 660 },
+        eventsmini: { left: 320, top: 660 },
+        announcementsmini: { left: 640, top: 660 },
       },
       sizes: {
-        assignments: { width: 528, height: 252 },
-        progress: { width: 320, height: 454 },
-        tasks: { width: 320, height: 420 },
-        personal: { width: 528, height: 185 },
-        filterbar: { width: 264, height: 456 },
+        assignments: { width: 760, height: 320 },
+        progress: { width: 460, height: 320 },
+        tasks: { width: 620, height: 300 },
+        personal: { width: 300, height: 300 },
+        filterbar: { width: 280, height: 300 },
+        quicklinks: { width: 300, height: 220 },
+        eventsmini: { width: 300, height: 220 },
+        announcementsmini: { width: 300, height: 220 },
       },
     };
-    const DASHBOARD_LAYOUT_VERSION = 6;
+    const DASHBOARD_LAYOUT_VERSION = 7;
     const dashboardWidgetCatalog = [
       { id: "assignments", label: "Assignments" },
       { id: "progress", label: "Progress Ring" },
@@ -3220,11 +3276,13 @@
             ? cfeFilterBarLayout
             : defaultLayout.filterBarLayout;
         freeWidgetPositions =
+          hasCustomized &&
           cfeDashboardWidgetPositions &&
           typeof cfeDashboardWidgetPositions === "object"
             ? cfeDashboardWidgetPositions
             : clonePositions(defaultLayout.positions);
         const storedLastFree =
+          hasCustomized &&
           cfeDashboardLastFreeWidgetPositions &&
           typeof cfeDashboardLastFreeWidgetPositions === "object"
             ? cfeDashboardLastFreeWidgetPositions
@@ -3233,7 +3291,9 @@
           ? clonePositions(storedLastFree)
           : clonePositions(freeWidgetPositions);
         widgetSizes =
-          cfeDashboardWidgetSizes && typeof cfeDashboardWidgetSizes === "object"
+          hasCustomized &&
+          cfeDashboardWidgetSizes &&
+          typeof cfeDashboardWidgetSizes === "object"
             ? cfeDashboardWidgetSizes
             : cloneWidgetSizes(defaultLayout.sizes);
         try {
