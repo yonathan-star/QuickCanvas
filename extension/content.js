@@ -667,14 +667,14 @@
 
   function paintGlobalNavColors() {
     const nav = document.getElementById("global_nav");
-    if (!nav) return;
+    const navShell = document.querySelector(".ic-app-header");
+    if (!nav && !navShell) return;
 
     const navBg = getRootVar("--cfe-nav-bg", "#152b3a");
     const navText = getRootVar("--cfe-nav-text", "#f8fafc");
     const navActiveText = getRootVar("--cfe-nav-active-text", "#ffffff");
 
-    const navShell = nav.closest(".ic-app-header") ||
-      document.querySelector(".ic-app-header");
+    const navRoot = navShell || nav;
     [
       navShell,
       nav,
@@ -691,12 +691,23 @@
       setStyleImportant(node, "color", navText);
     });
 
-    setStyleImportant(nav, "color", navText);
-    setStyleImportant(nav, "-webkit-text-fill-color", navText);
-    setStyleImportant(nav, "text-shadow", "none");
-    setStyleImportant(nav, "opacity", "1");
+    navRoot
+      ?.querySelectorAll(
+        "#menu, .ic-app-header__menu-list, .ic-app-header__main-navigation, .ic-app-header__primary",
+      )
+      .forEach((node) => {
+        setStyleImportant(node, "background", navBg);
+        setStyleImportant(node, "background-color", navBg);
+      });
 
-    const links = nav.querySelectorAll(
+    if (nav) {
+      setStyleImportant(nav, "color", navText);
+      setStyleImportant(nav, "-webkit-text-fill-color", navText);
+      setStyleImportant(nav, "text-shadow", "none");
+      setStyleImportant(nav, "opacity", "1");
+    }
+
+    const links = navRoot.querySelectorAll(
       '.ic-app-header__menu-list-link, [id^="global_nav_"][id$="_link"], #primaryNavToggle',
     );
 

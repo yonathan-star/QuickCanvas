@@ -5118,10 +5118,15 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 /* The approved dashboard is a true 12-column layout in normal view.
    Point-based positioning is reserved for Edit Layout mode only. */
 #cfe-dashboard:not(.cfe-layout-edit-mode) {
-    width: calc(100vw - 136px) !important;
+    width: calc(100% - 136px) !important;
     max-width: 1440px !important;
     margin: 28px 28px 48px max(108px, calc(50vw - 680px)) !important;
     zoom: 1 !important;
+}
+
+body.cfe-dashboard-only {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
 }
 
 #cfe-dashboard:not(.cfe-layout-edit-mode) .cfe-widget-canvas {
@@ -5493,6 +5498,111 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
     body.cfe-theme-applied .ic-app-header__secondary-navigation .ic-app-header__menu-list-link:focus-visible {
         background: var(--cfe-nav-hover-bg, rgba(255, 255, 255, 0.1)) !important;
         color: var(--cfe-nav-text, #ffffff) !important;
+    }
+
+    /* Some Canvas deployments place #menu beside #global_nav instead of
+       inside it. Target the real header tree as well as the legacy nesting. */
+    body.cfe-theme-applied .ic-app-header #menu,
+    body.cfe-theme-applied .ic-app-header .ic-app-header__menu-list {
+        display: flex !important;
+        width: 80px !important;
+        min-width: 80px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        flex: 1 0 auto !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        list-style: none !important;
+        background: var(--cfe-nav-bg, #152b3a) !important;
+        background-color: var(--cfe-nav-bg, #152b3a) !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header #menu > li,
+    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-item,
+    body.cfe-theme-applied .ic-app-header #menu .menu-item {
+        display: block !important;
+        width: 80px !important;
+        min-width: 80px !important;
+        min-height: 56px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        flex: 0 0 56px !important;
+        background: var(--cfe-nav-bg, #152b3a) !important;
+        background-color: var(--cfe-nav-bg, #152b3a) !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-link,
+    body.cfe-theme-applied .ic-app-header #menu [id^="global_nav_"][id$="_link"] {
+        position: relative !important;
+        z-index: 1 !important;
+        display: flex !important;
+        width: 80px !important;
+        height: 56px !important;
+        min-height: 56px !important;
+        margin: 0 !important;
+        padding: 6px 3px !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 3px !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        color: var(--cfe-nav-text, #f8fafc) !important;
+        -webkit-text-fill-color: var(--cfe-nav-text, #f8fafc) !important;
+        font-family: var(--cfe-font-body) !important;
+        text-align: center !important;
+        text-decoration: none !important;
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header #menu .menu-item-icon-container,
+    body.cfe-theme-applied .ic-app-header #menu .menu-item__icon,
+    body.cfe-theme-applied .ic-app-header #menu .ic-icon-svg,
+    body.cfe-theme-applied .ic-app-header #menu svg {
+        position: static !important;
+        display: block !important;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        margin: 0 !important;
+        transform: none !important;
+        color: currentColor !important;
+        fill: currentColor !important;
+        stroke: currentColor !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header #menu .menu-item__text,
+    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-item__text {
+        position: static !important;
+        display: block !important;
+        max-width: 74px !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        transform: none !important;
+        color: currentColor !important;
+        -webkit-text-fill-color: currentColor !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        line-height: 1.1 !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-link:hover,
+    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-link:focus-visible {
+        background: var(--cfe-nav-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+        color: var(--cfe-nav-text, #ffffff) !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-item--active,
+    body.cfe-theme-applied .ic-app-header #menu .menu-item--active,
+    body.cfe-theme-applied .ic-app-header #menu [aria-current="page"] {
+        background: var(--cfe-nav-active-bg, rgba(255, 255, 255, 0.1)) !important;
+        background-color: var(--cfe-nav-active-bg, rgba(255, 255, 255, 0.1)) !important;
+        box-shadow: inset 4px 0 0 var(--cfe-nav-text, #ffffff) !important;
     }
 }
 
