@@ -5518,8 +5518,8 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
     }
 
     body.cfe-theme-applied .ic-app-header #menu > li,
-    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-item,
-    body.cfe-theme-applied .ic-app-header #menu .menu-item {
+    body.cfe-theme-applied .ic-app-header .ic-app-header__menu-list-item,
+    body.cfe-theme-applied .ic-app-header .menu-item {
         display: block !important;
         width: 80px !important;
         min-width: 80px !important;
@@ -5531,8 +5531,9 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
         background-color: var(--cfe-nav-bg, #152b3a) !important;
     }
 
-    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-link,
-    body.cfe-theme-applied .ic-app-header #menu [id^="global_nav_"][id$="_link"] {
+    body.cfe-theme-applied .ic-app-header .ic-app-header__menu-list-link,
+    body.cfe-theme-applied .ic-app-header [id^="global_nav_"][id$="_link"],
+    body.cfe-theme-applied .ic-app-header #primaryNavToggle {
         position: relative !important;
         z-index: 1 !important;
         display: flex !important;
@@ -5558,10 +5559,10 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
         cursor: pointer !important;
     }
 
-    body.cfe-theme-applied .ic-app-header #menu .menu-item-icon-container,
-    body.cfe-theme-applied .ic-app-header #menu .menu-item__icon,
-    body.cfe-theme-applied .ic-app-header #menu .ic-icon-svg,
-    body.cfe-theme-applied .ic-app-header #menu svg {
+    body.cfe-theme-applied .ic-app-header .menu-item-icon-container,
+    body.cfe-theme-applied .ic-app-header .menu-item__icon,
+    body.cfe-theme-applied .ic-app-header .ic-icon-svg,
+    body.cfe-theme-applied .ic-app-header svg {
         position: static !important;
         display: block !important;
         width: 20px !important;
@@ -5574,8 +5575,8 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
         stroke: currentColor !important;
     }
 
-    body.cfe-theme-applied .ic-app-header #menu .menu-item__text,
-    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-item__text {
+    body.cfe-theme-applied .ic-app-header .menu-item__text,
+    body.cfe-theme-applied .ic-app-header .ic-app-header__menu-list-item__text {
         position: static !important;
         display: block !important;
         max-width: 74px !important;
@@ -5591,18 +5592,35 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
         white-space: nowrap !important;
     }
 
-    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-link:hover,
-    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-link:focus-visible {
+    body.cfe-theme-applied .ic-app-header .ic-app-header__menu-list-link:hover,
+    body.cfe-theme-applied .ic-app-header .ic-app-header__menu-list-link:focus-visible {
         background: var(--cfe-nav-hover-bg, rgba(255, 255, 255, 0.1)) !important;
         color: var(--cfe-nav-text, #ffffff) !important;
     }
 
-    body.cfe-theme-applied .ic-app-header #menu .ic-app-header__menu-list-item--active,
-    body.cfe-theme-applied .ic-app-header #menu .menu-item--active,
-    body.cfe-theme-applied .ic-app-header #menu [aria-current="page"] {
+    body.cfe-theme-applied .ic-app-header .ic-app-header__menu-list-item--active,
+    body.cfe-theme-applied .ic-app-header .menu-item--active,
+    body.cfe-theme-applied .ic-app-header [aria-current="page"] {
         background: var(--cfe-nav-active-bg, rgba(255, 255, 255, 0.1)) !important;
         background-color: var(--cfe-nav-active-bg, rgba(255, 255, 255, 0.1)) !important;
         box-shadow: inset 4px 0 0 var(--cfe-nav-text, #ffffff) !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header #global_nav_profile_link .ic-avatar,
+    body.cfe-theme-applied .ic-app-header #global_nav_profile_link .ic-avatar img,
+    body.cfe-theme-applied .ic-app-header #global_nav_profile_link img {
+        position: static !important;
+        display: block !important;
+        width: 24px !important;
+        height: 24px !important;
+        min-width: 24px !important;
+        min-height: 24px !important;
+        max-width: 24px !important;
+        max-height: 24px !important;
+        margin: 0 !important;
+        border-radius: 999px !important;
+        object-fit: cover !important;
+        transform: none !important;
     }
 }
 
@@ -5627,6 +5645,11 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
     body.cfe-theme-applied #global_nav .ic-app-header__menu-list-link,
     body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"],
     body.cfe-theme-applied #global_nav #primaryNavToggle,
+    body.cfe-theme-applied .ic-app-header #menu > li,
+    body.cfe-theme-applied .ic-app-header .ic-app-header__menu-list-item,
+    body.cfe-theme-applied .ic-app-header .menu-item,
+    body.cfe-theme-applied .ic-app-header [id^="global_nav_"][id$="_link"],
+    body.cfe-theme-applied .ic-app-header #primaryNavToggle,
     body.cfe-theme-applied .ic-app-header__secondary-navigation .ic-app-header__menu-list-link,
     body.cfe-theme-applied .ic-app-header__secondary-navigation [id^="global_nav_"][id$="_link"] {
         height: 50px !important;

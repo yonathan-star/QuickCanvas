@@ -681,7 +681,6 @@
       navShell?.querySelector(".ic-app-header__main-navigation"),
       navShell?.querySelector(".ic-app-header__primary"),
       navShell?.querySelector(".ic-app-header__secondary-navigation"),
-      navShell?.querySelector(".ic-app-header__logomark"),
       navShell?.querySelector(".ic-app-header__logomark-container"),
       navShell?.querySelector(".ic-app-header__logo-container"),
     ].forEach((node) => {
