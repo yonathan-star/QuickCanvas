@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>QuickCanvas theme fixture</title>
-    <link rel="stylesheet" href="/extension/content.css?v=0.7.0" />
+    <link rel="stylesheet" href="/extension/content.css?v=0.7.1" />
     <style>
       :root { --cfe-nav-bg:#152b3a; --cfe-nav-text:#fff; --cfe-nav-muted:#b8c7d0; --cfe-nav-hover-bg:#203d50; --cfe-nav-active-bg:#294b60; --cfe-nav-active-text:#fff; --cfe-nav-divider:#355064; }
       * { box-sizing: border-box; }
@@ -103,10 +103,16 @@
       const typeClasses = ["cfe-page-dashboard", "cfe-page-modules", "cfe-page-assignments", "cfe-page-grades", "cfe-page-discussions", "cfe-page-calendar", "cfe-page-settings", "cfe-quiz-page", "cfe-dashboard-only"];
       const sizeDashboard = () => {
         const dashboard = document.getElementById("cfe-dashboard");
-        const scale = Math.max(.5, Math.min(2.6, (document.documentElement.clientWidth - 132) / 1120));
+        const viewportWidth = document.documentElement.clientWidth;
+        const compact = viewportWidth <= 760;
+        const navWidth = compact ? 0 : 80;
+        const canvasWidth = Math.max(320, viewportWidth - navWidth);
+        const available = compact ? Math.max(300, viewportWidth - 24) : Math.min(1440, Math.max(560, canvasWidth - 56));
+        const left = compact ? 12 : navWidth + Math.max(28, (canvasWidth - available) / 2);
+        const scale = Math.max(.5, Math.min(1440 / 1120, available / 1120));
         dashboard.style.setProperty("--cfe-dashboard-scale", scale);
-        dashboard.style.setProperty("--cfe-dashboard-margin-left", `${104 / scale}px`);
-        dashboard.style.setProperty("--cfe-dashboard-margin-top", `${24 / scale}px`);
+        dashboard.style.setProperty("--cfe-dashboard-margin-left", `${left / scale}px`);
+        dashboard.style.setProperty("--cfe-dashboard-margin-top", `${(compact ? 12 : 28) / scale}px`);
         dashboard.style.setProperty("--cfe-dashboard-margin-bottom", `${48 / scale}px`);
       };
       document.querySelectorAll("[data-show]").forEach((button) => button.addEventListener("click", () => {

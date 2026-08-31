@@ -4724,7 +4724,7 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
         0
         var(--cfe-dashboard-margin-bottom, 48px)
         var(--cfe-dashboard-margin-left, 104px) !important;
-    padding: 8px 0 32px !important;
+    padding: 0 0 32px !important;
     background: transparent !important;
     border: 0 !important;
     border-radius: 0 !important;
@@ -4739,7 +4739,7 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
     align-items: flex-start;
     justify-content: space-between;
     gap: 24px;
-    margin: 0 0 20px !important;
+    margin: 0 0 24px !important;
     padding: 0 !important;
     border: 0 !important;
 }
@@ -4767,7 +4767,7 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
     margin: 0 0 5px !important;
     color: var(--cfe-text) !important;
     font-family: var(--cfe-font-head) !important;
-    font-size: clamp(26px, 2.4vw, 36px) !important;
+    font-size: 34px !important;
     font-weight: 600 !important;
     letter-spacing: -0.035em;
     line-height: 1.08;
@@ -4782,7 +4782,7 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 #cfe-dashboard .cfe-actions {
     width: 100%;
     margin: 0 0 20px !important;
-    padding: 10px;
+    padding: 12px;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -4933,8 +4933,37 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 
 #cfe-dashboard .cfe-card,
 #cfe-dashboard .cfe-widget {
-    padding: 18px !important;
+    padding: 16px !important;
     gap: 12px;
+}
+
+#cfe-dashboard .cfe-tasks-widget .cfe-task-list {
+    gap: 8px;
+}
+
+#cfe-dashboard #cfe-assignments .cfe-list {
+    max-height: 218px;
+    overflow: auto;
+}
+
+#cfe-dashboard .cfe-personal-widget #cfe-personal-list {
+    max-height: 92px;
+    overflow: auto;
+}
+
+#cfe-dashboard .cfe-tasks-widget .cfe-task-row {
+    min-height: 0;
+    padding: 12px !important;
+    border: 1px solid var(--cfe-border) !important;
+    border-radius: 6px !important;
+}
+
+#cfe-dashboard [data-widget-id="eventsmini"] .cfe-task-row,
+#cfe-dashboard [data-widget-id="announcementsmini"] .cfe-task-row {
+    min-height: 0;
+    padding: 6px 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
 }
 
 #cfe-dashboard .cfe-card h3,

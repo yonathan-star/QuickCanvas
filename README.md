@@ -9,10 +9,10 @@ Canvas OAuth is still the supported option for a standalone or multi-school
 service. It requires an administrator-enabled Developer Key and a trusted
 backend for the client secret; never embed that secret in this extension.
 
-Version 0.7 implements the approved Calm Workspace popup pixel-for-pixel and
-makes the dashboard scale its entire 12-column workspace to the available
-Canvas width. Movable widget coordinates remain editable while the normal view
-now fills the page instead of clustering in a fixed-width corner.
+Version 0.7.1 implements the approved Calm Workspace popup at its native
+measurements and migrates the dashboard to the approved clean 12-column layout.
+Normal viewing keeps stable card sizes and concise previews; Edit Layout still
+supports dragging, resizing, removing, and restoring widgets.
 
 - `extension/` contains the browser extension source.
 - `ad-kit/` contains the TikTok ad project and recording scripts.

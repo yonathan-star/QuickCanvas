@@ -3115,7 +3115,7 @@
       },
     };
     const DASHBOARD_LOGICAL_WIDTH = 1120;
-    const DASHBOARD_LAYOUT_VERSION = 9;
+    const DASHBOARD_LAYOUT_VERSION = 10;
     const dashboardWidgetCatalog = [
       { id: "assignments", label: "Assignments" },
       { id: "progress", label: "Progress Ring" },
@@ -3190,12 +3190,19 @@
         320,
         document.documentElement.clientWidth || window.innerWidth || 1280,
       );
-      const pageInset = viewportWidth <= 760 ? 24 : 132;
-      const availableWidth = Math.max(300, viewportWidth - pageInset);
+      const isCompact = viewportWidth <= 760;
+      const canvasNavWidth = isCompact ? 0 : 80;
+      const canvasAreaWidth = Math.max(320, viewportWidth - canvasNavWidth);
+      const availableWidth = isCompact
+        ? Math.max(300, viewportWidth - 24)
+        : Math.min(1440, Math.max(560, canvasAreaWidth - 56));
+      const physicalLeft = isCompact
+        ? 12
+        : canvasNavWidth + Math.max(28, (canvasAreaWidth - availableWidth) / 2);
       dashboardRenderScale = clamp(
         availableWidth / DASHBOARD_LOGICAL_WIDTH,
         0.5,
-        2.6,
+        1440 / DASHBOARD_LOGICAL_WIDTH,
       );
       container.style.setProperty(
         "--cfe-dashboard-scale",
@@ -3203,11 +3210,11 @@
       );
       container.style.setProperty(
         "--cfe-dashboard-margin-left",
-        `${(viewportWidth <= 760 ? 12 : 104) / dashboardRenderScale}px`,
+        `${physicalLeft / dashboardRenderScale}px`,
       );
       container.style.setProperty(
         "--cfe-dashboard-margin-top",
-        `${(viewportWidth <= 760 ? 12 : 24) / dashboardRenderScale}px`,
+        `${(isCompact ? 12 : 28) / dashboardRenderScale}px`,
       );
       container.style.setProperty(
         "--cfe-dashboard-margin-bottom",
@@ -3312,40 +3319,12 @@
       } = stored || {};
       const defaultLayout = getDefaultDashboardLayoutState();
       if (Number(cfeDashboardLayoutVersion || 0) < DASHBOARD_LAYOUT_VERSION) {
-        const hasCustomized = Boolean(cfeDashboardLayoutCustomized);
-        dashboardWidgetPrefs = hasCustomized
-          ? normalizeDashboardWidgetPrefs(cfeDashboardWidgets)
-          : { order: [...defaultLayout.order] };
-        snapToFit =
-          typeof cfeDashboardSnapToFit === "boolean"
-            ? cfeDashboardSnapToFit
-            : defaultLayout.snapToFit;
-        filterBarLayout =
-          typeof cfeFilterBarLayout === "string" &&
-          ["horizontal", "vertical"].includes(cfeFilterBarLayout)
-            ? cfeFilterBarLayout
-            : defaultLayout.filterBarLayout;
-        freeWidgetPositions =
-          hasCustomized &&
-          cfeDashboardWidgetPositions &&
-          typeof cfeDashboardWidgetPositions === "object"
-            ? cfeDashboardWidgetPositions
-            : clonePositions(defaultLayout.positions);
-        const storedLastFree =
-          hasCustomized &&
-          cfeDashboardLastFreeWidgetPositions &&
-          typeof cfeDashboardLastFreeWidgetPositions === "object"
-            ? cfeDashboardLastFreeWidgetPositions
-            : {};
-        lastFreeWidgetPositions = Object.keys(storedLastFree).length
-          ? clonePositions(storedLastFree)
-          : clonePositions(freeWidgetPositions);
-        widgetSizes =
-          hasCustomized &&
-          cfeDashboardWidgetSizes &&
-          typeof cfeDashboardWidgetSizes === "object"
-            ? cfeDashboardWidgetSizes
-            : cloneWidgetSizes(defaultLayout.sizes);
+        dashboardWidgetPrefs = { order: [...defaultLayout.order] };
+        snapToFit = defaultLayout.snapToFit;
+        filterBarLayout = defaultLayout.filterBarLayout;
+        freeWidgetPositions = clonePositions(defaultLayout.positions);
+        lastFreeWidgetPositions = clonePositions(defaultLayout.positions);
+        widgetSizes = cloneWidgetSizes(defaultLayout.sizes);
         try {
           await chrome.storage.sync.set({
             cfeDashboardWidgets: dashboardWidgetPrefs,
@@ -3354,7 +3333,7 @@
             cfeDashboardWidgetSizes: widgetSizes,
             cfeFilterBarLayout: filterBarLayout,
             cfeDashboardSnapToFit: snapToFit,
-            cfeDashboardLayoutCustomized: hasCustomized,
+            cfeDashboardLayoutCustomized: false,
             cfeDashboardLayoutVersion: DASHBOARD_LAYOUT_VERSION,
           });
         } catch (error) {
@@ -5393,6 +5372,7 @@
 
     function renderPersonalTodos() {
       const syncPersonalWidgetHeightToContent = () => {
+        if (!layoutEditMode) return;
         const personalWidget = getDashboardWidgetEl("personal");
         if (!(personalWidget instanceof HTMLElement)) return;
         const currentWidth = Math.round(personalWidget.offsetWidth || 0);
@@ -5784,6 +5764,7 @@
     }
 
     function syncAssignmentsWidgetHeightToContent() {
+      if (!layoutEditMode) return;
       const assignmentsWidget = getDashboardWidgetEl("assignments");
       if (!(assignmentsWidget instanceof HTMLElement)) return;
       const currentWidth = Math.round(assignmentsWidget.offsetWidth || 0);
@@ -5827,7 +5808,7 @@
         return;
       }
 
-      const tasks = items.slice(0, 12).map((item) => ({
+      const tasks = items.slice(0, 3).map((item) => ({
         title: item.name,
         url: item.url,
         courseName: resolveCourseName(
@@ -5860,7 +5841,7 @@
         });
 
       renderCompletionWidget(items);
-      refreshSubmissionStates(items.slice(0, 12));
+      refreshSubmissionStates(items.slice(0, 3));
       syncAssignmentsWidgetHeightToContent();
     }
 
@@ -5961,6 +5942,7 @@
     }
 
     function syncTasksWidgetHeightToContent() {
+      if (!layoutEditMode) return;
       const resized = fitWidgetSizeToContent("tasks");
       if (!resized) return;
       refreshFreeCanvasHeight();
@@ -5980,7 +5962,7 @@
         const items = announcementsCache
           .slice()
           .sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at))
-          .slice(0, 8)
+          .slice(0, 2)
           .map((item) => ({
             title: item.title,
             url: item.url,
@@ -6010,7 +5992,7 @@
         const items = discussionsCache
           .slice()
           .sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at))
-          .slice(0, 8)
+          .slice(0, 2)
           .map((item) => ({
             title: item.title,
             url: item.url,
@@ -6040,7 +6022,7 @@
         const items = eventsCache
           .slice()
           .sort((a, b) => new Date(a.start_at) - new Date(b.start_at))
-          .slice(0, 8)
+          .slice(0, 2)
           .map((item) => ({
             title: item.title,
             url: item.url,
@@ -6073,7 +6055,7 @@
       const items = filteredSource
         .slice()
         .sort((a, b) => new Date(a.due_at || 0) - new Date(b.due_at || 0))
-        .slice(0, 10)
+        .slice(0, 2)
         .map((item) => ({
           title: item.name,
           url: item.url,
@@ -6112,7 +6094,7 @@
           const eventItems = eventsCache
             .slice()
             .sort((a, b) => new Date(a.start_at) - new Date(b.start_at))
-            .slice(0, 6)
+            .slice(0, 2)
             .map((item) => ({
               title: item.title,
               url: item.url,
@@ -6142,7 +6124,7 @@
           const announcementItems = announcementsCache
             .slice()
             .sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at))
-            .slice(0, 6)
+            .slice(0, 2)
             .map((item) => ({
               title: item.title,
               url: item.url,
