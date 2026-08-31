@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>QuickCanvas theme fixture</title>
-    <link rel="stylesheet" href="/extension/content.css?v=0.8.0" />
+    <link rel="stylesheet" href="/extension/content.css?v=0.8.1" />
     <style>
       :root { --cfe-nav-bg:#152b3a; --cfe-nav-text:#fff; --cfe-nav-muted:#b8c7d0; --cfe-nav-hover-bg:#203d50; --cfe-nav-active-bg:#294b60; --cfe-nav-active-text:#fff; --cfe-nav-divider:#355064; --cfe-brand-icon:url("/extension/icons/icon48.png"); }
       * { box-sizing: border-box; }
@@ -12,7 +12,9 @@
       .ic-app-header { position: fixed; inset: 0 auto 0 0; width: 84px; z-index: 5; }
       .fixture-shell { margin-left: 84px; min-height: 100vh; }
       .ic-app-nav-toggle-and-crumbs { min-height: 52px; padding: 16px 24px; }
+      .ic-app-crumbs__crumbs { display: flex; gap: 18px; margin: 0; padding: 0; list-style: none; }
       .fixture-columns { display: grid; grid-template-columns: 220px minmax(0, 1fr) 240px; gap: 24px; padding: 24px; }
+      body.cfe-page-external-tool .fixture-columns { grid-template-columns: 208px minmax(0, 1fr); }
       #left-side, #right-side { padding: 12px; }
       #section-tabs { list-style: none; margin: 0; }
       #section-tabs .section a { padding: 9px 12px; text-decoration: none; }
@@ -45,6 +47,7 @@
       </div>
       <div class="fixture-columns ic-Layout-columns">
         <aside id="left-side">
+          <div class="cfe-course-identity"><span class="cfe-course-identity-label">Course</span><strong class="cfe-course-identity-title">Ecology &amp; Evolution</strong><small class="cfe-course-identity-status"><i></i>Active course</small></div>
           <ul id="section-tabs">
             <li class="section"><a href="#">Home</a></li>
             <li class="section"><a href="#">Announcements</a></li>
@@ -56,7 +59,7 @@
         </aside>
         <main id="content" class="ic-Layout-contentMain">
           <section class="fixture-page" data-fixture-page="modules">
-            <div class="ic-Action-header"><div><p>Course content</p><h1>Modules</h1></div><div><button class="Button">Import</button> <button class="Button Button--primary">+ Module</button></div></div>
+            <div class="ic-Action-header cfe-course-page-header"><div class="cfe-course-page-copy"><p class="cfe-course-page-eyebrow">Course content</p><h1 class="cfe-course-page-title">Modules</h1><p class="cfe-course-page-description">Move through readings, activities, and assessments in order.</p></div><div><button class="Button">Import</button> <button class="Button Button--primary">+ Module</button></div></div>
             <div id="context_modules">
               <article class="item-group-container"><header class="ig-header"><strong>Week 4: Population Ecology</strong><span class="published-status"> Published</span></header><div class="ig-row">Reading: Population Growth Models</div><div class="ig-row">Mini-lecture: Logistic Growth</div><div class="ig-row">Field Notes Assignment</div></article>
               <article class="item-group-container"><header class="ig-header"><strong>Week 5: Community Interactions</strong></header><div class="ig-row">Reading: Species Interactions</div><div class="ig-row">Discussion: Keystone Species</div><div class="ig-row">Week 5 Knowledge Check</div></article>
@@ -87,7 +90,7 @@
             <div class="ic-Action-header"><h1>Quizzes &amp; Assessments</h1><button class="Button Button--primary">+ Quiz</button></div><div id="quiz_index" class="quiz-list"><div class="ig-row"><strong>Week 5 Knowledge Check</strong><span>Due Friday · 10 points</span></div><div class="ig-row"><strong>Population Ecology Review</strong><span>Available Sep 28</span></div></div>
           </section>
           <section class="fixture-page" data-fixture-page="external-tool" hidden>
-            <div class="ic-Action-header"><div><p>Course tool</p><h1>Media and Recordings</h1></div><button class="Button">Open in new tab</button></div><div id="tool_content"><iframe id="external_tool_iframe" title="Panopto fixture" srcdoc="<!doctype html><style>body{font:16px system-ui;margin:0;padding:28px;color:#24313a;background:#fff}.video{padding:32px;border:1px solid #dfe5e8;border-radius:12px;background:#f7fafb}h2{margin-top:0}</style><div class='video'><h2>Population Ecology: Carrying Capacity</h2><p>Lecture recording · 42 minutes</p><button>Watch recording</button></div>"></iframe></div>
+            <div class="cfe-tool-toolbar"><div class="cfe-tool-toolbar-copy"><span class="cfe-tool-toolbar-kicker">External course tool</span><strong>Media and Recordings</strong><small>Provided by your school · opens securely within Canvas</small></div><div class="cfe-tool-toolbar-actions"><span class="cfe-tool-connected"><i></i>Connected</span><button>Reload</button><button>Fullscreen</button><a href="#">Open separately</a></div></div><div id="tool_content"><iframe id="external_tool_iframe" title="Panopto fixture" srcdoc="<!doctype html><style>body{font:16px system-ui;margin:0;padding:28px;color:#24313a;background:#fff}.video{padding:32px;border:1px solid #dfe5e8;border-radius:12px;background:#f7fafb}h2{margin-top:0}</style><div class='video'><h2>Population Ecology: Carrying Capacity</h2><p>Lecture recording · 42 minutes</p><button>Watch recording</button></div>"></iframe></div>
           </section>
           <section class="fixture-page" data-fixture-page="calendar" hidden>
             <h1>Calendar</h1><div id="calendar-app"><div class="fc-view"><table class="fc-scrollgrid"><thead><tr><th class="fc-col-header-cell">Sun</th><th class="fc-col-header-cell">Mon</th><th class="fc-col-header-cell">Tue</th></tr></thead><tbody><tr><td class="fc-day">21</td><td class="fc-day fc-day-today">22</td><td class="fc-day">23</td></tr></tbody></table></div></div>
@@ -150,9 +153,8 @@
         if (page === "dashboard") sizeDashboard();
       }));
       window.addEventListener("resize", sizeDashboard);
-      if (new URLSearchParams(location.search).get("page") === "dashboard") {
-        document.querySelector('[data-show="dashboard"]').click();
-      }
+      const requestedPage = new URLSearchParams(location.search).get("page");
+      document.querySelector(`[data-show="${requestedPage}"]`)?.click();
     </script>
   </body>
 </html>

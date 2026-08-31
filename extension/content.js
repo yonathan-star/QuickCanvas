@@ -233,6 +233,272 @@
     );
   }
 
+  const COURSE_PAGE_PRESENTATION = {
+    "cfe-page-course-home": {
+      eyebrow: "Course overview",
+      description: "Announcements, upcoming work, progress, and course tools.",
+    },
+    "cfe-page-modules": {
+      eyebrow: "Course content",
+      description: "Move through readings, activities, and assessments in order.",
+    },
+    "cfe-page-assignments": {
+      eyebrow: "Course content",
+      description: "Review upcoming work, submission states, and assignment groups.",
+    },
+    "cfe-page-discussions": {
+      eyebrow: "Course conversations",
+      description: "Read closely, contribute thoughtfully, and follow replies.",
+    },
+    "cfe-page-grades": {
+      eyebrow: "Student record",
+      description: "Review scores, feedback, and progress across assignment groups.",
+    },
+    "cfe-page-announcements": {
+      eyebrow: "Course communication",
+      description: "Updates and notices from your course team.",
+    },
+    "cfe-page-pages": {
+      eyebrow: "Course content",
+      description: "Read course pages and find shared resources in one workspace.",
+    },
+    "cfe-page-files": {
+      eyebrow: "Course content",
+      description: "Browse folders, course documents, and shared resources.",
+    },
+    "cfe-page-people": {
+      eyebrow: "Course roster",
+      description: "Find classmates, instructors, sections, and course groups.",
+    },
+    "cfe-page-syllabus": {
+      eyebrow: "Course information",
+      description: "Policies, schedule, grading details, and course expectations.",
+    },
+    "cfe-page-assessments": {
+      eyebrow: "Assessment",
+      description: "Instructions, attempts, progress, and assessment feedback.",
+    },
+    "cfe-page-external-tool": {
+      eyebrow: "External course tool",
+      description: "Provided by your school and opened securely within Canvas.",
+    },
+  };
+
+  function firstNonEmptyText(selectors) {
+    for (const selector of selectors) {
+      const nodes = document.querySelectorAll(selector);
+      for (const node of nodes) {
+        if (node.closest("[hidden], .screenreader-only")) continue;
+        const text = String(node.textContent || "").replace(/\s+/g, " ").trim();
+        if (text) return text;
+      }
+    }
+    return "";
+  }
+
+  function currentCoursePresentation() {
+    for (const [className, presentation] of Object.entries(
+      COURSE_PAGE_PRESENTATION,
+    )) {
+      if (document.body?.classList.contains(className)) return presentation;
+    }
+    return {
+      eyebrow: "Course workspace",
+      description: "Course materials and activity in one focused workspace.",
+    };
+  }
+
+  function createCourseIdentity(courseName) {
+    const identity = document.createElement("div");
+    identity.className = "cfe-course-identity";
+    const label = document.createElement("span");
+    label.className = "cfe-course-identity-label";
+    label.textContent = "Course";
+    const title = document.createElement("strong");
+    title.className = "cfe-course-identity-title";
+    title.textContent = courseName || "Course workspace";
+    const status = document.createElement("small");
+    status.className = "cfe-course-identity-status";
+    status.innerHTML = '<i aria-hidden="true"></i>Active course';
+    identity.append(label, title, status);
+    return identity;
+  }
+
+  function ensureCoursePageHeader(courseName) {
+    const content = document.querySelector("#content, .ic-Layout-contentMain");
+    if (!content) return;
+    const presentation = currentCoursePresentation();
+    let title = content.querySelector(
+      ".ic-Action-header__Heading, h1:not(.screenreader-only)",
+    );
+    if (title?.closest(".cfe-tool-toolbar")) title = null;
+    let header = title?.closest(
+      ".ic-Action-header, .header-bar, [data-testid='page-header']",
+    );
+
+    if (!header && title) {
+      header = title.parentElement;
+    }
+
+    if (!header && document.body?.classList.contains("cfe-page-course-home")) {
+      header = document.createElement("header");
+      header.className =
+        "cfe-course-page-header cfe-course-page-header--injected";
+      title = document.createElement("h1");
+      title.textContent = courseName || "Course home";
+      header.appendChild(title);
+      content.prepend(header);
+    }
+
+    if (!header || !title) return;
+    header.classList.add("cfe-course-page-header");
+    title.classList.add("cfe-course-page-title");
+    let copy =
+      title.closest(".ic-Action-header__Primary") || title.parentElement || header;
+    if (copy === header) {
+      copy = document.createElement("div");
+      copy.className =
+        "cfe-course-page-copy cfe-course-page-copy--injected";
+      title.before(copy);
+      copy.appendChild(title);
+    }
+    copy.classList.add("cfe-course-page-copy");
+    let eyebrow = copy.querySelector(":scope > .cfe-course-page-eyebrow");
+    if (!eyebrow) {
+      eyebrow = document.createElement("p");
+      eyebrow.className = "cfe-course-page-eyebrow";
+      title.before(eyebrow);
+    }
+    eyebrow.textContent = presentation.eyebrow;
+    let description = copy.querySelector(
+      ":scope > .cfe-course-page-description",
+    );
+    if (!description) {
+      description = document.createElement("p");
+      description.className = "cfe-course-page-description";
+      title.after(description);
+    }
+    description.textContent = presentation.description;
+  }
+
+  function courseToolFrame() {
+    return document.querySelector(
+      "#external_tool_iframe, iframe[name='tool_content'], iframe[src*='external_tools'], iframe[src*='panopto'], iframe[src*='instructuremedia']",
+    );
+  }
+
+  function ensureExternalToolToolbar() {
+    if (!document.body?.classList.contains("cfe-page-external-tool")) return;
+    const frame = courseToolFrame();
+    const host =
+      frame?.closest(
+        "#tool_content, #external_tool, .tool_content_wrapper, .external-tool-content, [data-testid*='external-tool']",
+      ) || frame;
+    if (!host || host.previousElementSibling?.classList.contains("cfe-tool-toolbar")) {
+      return;
+    }
+    const toolName =
+      firstNonEmptyText([
+        "#content h1",
+        "#section-tabs .section.active",
+        ".ic-app-crumbs__crumb--current",
+      ]) || "Course tool";
+    const toolbar = document.createElement("section");
+    toolbar.className = "cfe-tool-toolbar";
+    toolbar.setAttribute("aria-label", `${toolName} controls`);
+    toolbar.innerHTML = `
+      <div class="cfe-tool-toolbar-copy">
+        <span class="cfe-tool-toolbar-kicker">External course tool</span>
+        <strong>${escapeHtml(toolName)}</strong>
+        <small>Provided by your school · opens securely within Canvas</small>
+      </div>
+      <div class="cfe-tool-toolbar-actions">
+        <span class="cfe-tool-connected"><i aria-hidden="true"></i>Connected</span>
+        <button type="button" data-cfe-tool-action="reload">Reload</button>
+        <button type="button" data-cfe-tool-action="fullscreen">Fullscreen</button>
+        <a data-cfe-tool-action="open" target="_blank" rel="noopener noreferrer">Open separately</a>
+      </div>`;
+    host.before(toolbar);
+    const openLink = toolbar.querySelector('[data-cfe-tool-action="open"]');
+    const frameUrl = frame?.getAttribute("src") || "";
+    if (openLink) {
+      openLink.href = sanitizeHref(frameUrl || window.location.href);
+    }
+    toolbar
+      .querySelector('[data-cfe-tool-action="reload"]')
+      ?.addEventListener("click", () => {
+        const activeFrame = courseToolFrame();
+        if (activeFrame?.src) activeFrame.src = activeFrame.src;
+      });
+    toolbar
+      .querySelector('[data-cfe-tool-action="fullscreen"]')
+      ?.addEventListener("click", () => {
+        const target =
+          courseToolFrame()?.closest(
+            "#tool_content, #external_tool, .tool_content_wrapper, .external-tool-content",
+          ) || courseToolFrame();
+        target?.requestFullscreen?.().catch(() => {
+          // Canvas may block fullscreen until the embedded tool is ready.
+        });
+      });
+  }
+
+  function removeCourseDesignAdapter() {
+    document
+      .querySelectorAll(".cfe-course-page-copy--injected")
+      .forEach((wrapper) => {
+        const title = wrapper.querySelector(":scope > .cfe-course-page-title");
+        if (title) wrapper.before(title);
+        wrapper.remove();
+      });
+    document
+      .querySelectorAll(
+        ".cfe-course-identity, .cfe-course-page-header--injected, .cfe-tool-toolbar",
+      )
+      .forEach((node) => node.remove());
+    document.querySelectorAll(".cfe-course-page-header").forEach((node) => {
+      node.classList.remove("cfe-course-page-header");
+    });
+    document.querySelectorAll(".cfe-course-page-title").forEach((node) => {
+      node.classList.remove("cfe-course-page-title");
+    });
+    document.querySelectorAll(".cfe-course-page-copy").forEach((node) => {
+      node.classList.remove("cfe-course-page-copy");
+    });
+    document
+      .querySelectorAll(
+        ".cfe-course-page-eyebrow, .cfe-course-page-description",
+      )
+      .forEach((node) => node.remove());
+  }
+
+  function ensureCourseDesignAdapter() {
+    if (!document.body?.classList.contains("cfe-page-course")) {
+      removeCourseDesignAdapter();
+      return;
+    }
+    const courseName =
+      firstNonEmptyText([
+        ".ic-app-crumbs__crumbs a[href*='/courses/']",
+        "#breadcrumbs a[href*='/courses/']",
+        "#section-tabs-header-subtitle",
+      ]) || "Course workspace";
+    const leftSide = document.querySelector("#left-side, .ic-Layout-aside");
+    const sectionTabs = leftSide?.querySelector("#section-tabs");
+    if (leftSide && sectionTabs) {
+      let identity = leftSide.querySelector(":scope > .cfe-course-identity");
+      if (!identity) {
+        identity = createCourseIdentity(courseName);
+        sectionTabs.before(identity);
+      } else {
+        const title = identity.querySelector(".cfe-course-identity-title");
+        if (title) title.textContent = courseName;
+      }
+    }
+    ensureCoursePageHeader(courseName);
+    ensureExternalToolToolbar();
+  }
+
   function isExtensionContextValid() {
     return Boolean(chrome?.runtime?.id);
   }
@@ -993,6 +1259,7 @@
     if (styleTag) {
       styleTag.remove();
     }
+    ensureCourseDesignAdapter();
   }
 
   function applyPopupTheme(theme) {
@@ -1437,6 +1704,9 @@
       if (isStaleInstance()) return;
       const path = window.location.pathname || "/";
       syncPageTypeClasses(path);
+      if (document.documentElement.classList.contains("cfe-theme-applied")) {
+        ensureCourseDesignAdapter();
+      }
       const now = Date.now();
       const shouldRefreshTheme =
         document.visibilityState === "visible" &&
@@ -1594,6 +1864,9 @@
       courseCanvasBlocksObserver = null;
     }
     removeAllInjectedContainers();
+    if (!document.body?.classList.contains("cfe-page-course")) {
+      removeCourseDesignAdapter();
+    }
     document
       .querySelectorAll("#cfe-course-due-widget, #cfe-course-widget-board")
       .forEach((el) => el.remove());
