@@ -4715,7 +4715,7 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 
 #cfe-dashboard .cfe-actions {
     width: 100%;
-    margin-top: 104px;
+    margin: 0 0 20px !important;
     padding: 10px;
     display: flex;
     align-items: center;
@@ -4731,10 +4731,14 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
     padding: 8px 14px;
 }
 
-#cfe-dashboard .cfe-actions .cfe-edit-layout,
-#cfe-dashboard .cfe-actions .cfe-refresh {
-    position: absolute;
-    top: 0;
+#cfe-dashboard .cfe-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#cfe-dashboard .cfe-header-controls .cfe-edit-layout,
+#cfe-dashboard .cfe-header-controls .cfe-refresh {
     min-height: 38px;
     background: var(--cfe-surface) !important;
     color: var(--cfe-text) !important;
@@ -4742,19 +4746,14 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
     box-shadow: var(--cfe-shadow-soft) !important;
 }
 
-#cfe-dashboard .cfe-actions .cfe-edit-layout {
-    right: 54px;
-}
-
-#cfe-dashboard .cfe-actions .cfe-refresh {
-    right: 0;
+#cfe-dashboard .cfe-header-controls .cfe-refresh {
     width: 42px;
     overflow: hidden;
     color: transparent !important;
     font-size: 0;
 }
 
-#cfe-dashboard .cfe-actions .cfe-refresh::before {
+#cfe-dashboard .cfe-header-controls .cfe-refresh::before {
     content: "↻";
     display: grid;
     place-items: center;
@@ -4818,6 +4817,10 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
     background: var(--cfe-accent-soft);
     border: 1px dashed var(--cfe-accent);
     border-radius: var(--cfe-radius-lg);
+}
+
+#cfe-dashboard .cfe-widget-dock[hidden] {
+    display: none !important;
 }
 
 #cfe-dashboard .cfe-widget-chip {
@@ -5044,13 +5047,8 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
         display: block;
     }
 
-    #cfe-dashboard .cfe-actions {
-        margin-top: 72px;
-    }
-
-    #cfe-dashboard .cfe-actions .cfe-edit-layout {
-        left: 0;
-        right: auto;
+    #cfe-dashboard .cfe-header-controls {
+        margin-top: 14px;
     }
 
     #cfe-dashboard .cfe-date-range-tools,

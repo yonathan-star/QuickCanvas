@@ -10,6 +10,21 @@ const openOptionsBtn = document.getElementById("openOptions");
 const statusEl = document.getElementById("status");
 const globalStatusEl = document.getElementById("globalStatus");
 const statusPill = document.getElementById("statusPill");
+const timeGreetingEl = document.getElementById("timeGreeting");
+const openDashboardBtn = document.getElementById("openDashboard");
+const connectionNameEl = document.getElementById("connectionName");
+const connectionStateEl = document.getElementById("connectionState");
+const togglePresetsBtn = document.getElementById("togglePresets");
+const appearanceQuickBtn = document.getElementById("appearanceQuick");
+const remindersQuickBtn = document.getElementById("remindersQuick");
+const customThemeQuickBtn = document.getElementById("customThemeQuick");
+const cloudThemesQuickBtn = document.getElementById("cloudThemesQuick");
+const manageAccountQuickBtn = document.getElementById("manageAccountQuick");
+const quickAccountNameEl = document.getElementById("quickAccountName");
+const quickAccountAvatarEl = document.getElementById("quickAccountAvatar");
+const themeEditorPanel = document.querySelector(".theme-editor-panel");
+const connectionPanel = document.querySelector(".connection-panel");
+const communityPanel = document.querySelector(".community-panel");
 
 const themeModeSelect = document.getElementById("themeMode");
 const accentColorInput = document.getElementById("accentColor");
@@ -155,55 +170,55 @@ const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
 const PRESETS = [
   {
-    name: "Canvas Classic",
+    name: "Quiet Study",
     mode: "light",
-    accent: "#1b6dff",
-    bg: "#f5f6f7",
+    accent: "#1f5f8b",
+    bg: "#f7f5f0",
     surface: "#ffffff",
-    surfaceAlt: "#f8fafc",
-    border: "#e5e9ef",
-    text: "#2d3b45",
-    muted: "#6b7780",
-    bgIntensity: 30,
-    surfaceContrast: 58,
+    surfaceAlt: "#f8faf9",
+    border: "#e6e1d6",
+    text: "#1f2a33",
+    muted: "#6f7b83",
+    bgIntensity: 24,
+    surfaceContrast: 54,
     fontBody: "Space Grotesk",
     fontHead: "Fraunces",
     radius: 10,
     shadow: 25,
   },
   {
-    name: "Ocean Neon",
-    mode: "dark",
-    accent: "#36d7ff",
-    bg: "#08111f",
-    surface: "#0f1b2d",
-    surfaceAlt: "#17263d",
-    border: "#29405f",
-    text: "#eef6ff",
-    muted: "#a9bdd6",
-    bgIntensity: 30,
-    surfaceContrast: 66,
-    fontBody: "Sora",
-    fontHead: "Bebas Neue",
+    name: "Warm Paper",
+    mode: "light",
+    accent: "#b5633c",
+    bg: "#f5eadb",
+    surface: "#fffaf2",
+    surfaceAlt: "#fbf1e4",
+    border: "#e7d6c3",
+    text: "#3f3028",
+    muted: "#806c60",
+    bgIntensity: 28,
+    surfaceContrast: 56,
+    fontBody: "Space Grotesk",
+    fontHead: "Fraunces",
     radius: 10,
     shadow: 28,
   },
   {
-    name: "Playful Pop",
-    mode: "light",
-    accent: "#ef3f7f",
-    bg: "#fff7fb",
-    surface: "#ffffff",
-    surfaceAlt: "#ffeef7",
-    border: "#edcade",
-    text: "#2d1f2a",
-    muted: "#725f6d",
-    bgIntensity: 26,
-    surfaceContrast: 58,
-    fontBody: "Nunito",
-    fontHead: "Fredoka",
-    radius: 12,
-    shadow: 22,
+    name: "Night Focus",
+    mode: "dark",
+    accent: "#70b7d8",
+    bg: "#18232d",
+    surface: "#263643",
+    surfaceAlt: "#20303b",
+    border: "#39505d",
+    text: "#edf4f7",
+    muted: "#9eb0ba",
+    bgIntensity: 24,
+    surfaceContrast: 64,
+    fontBody: "Space Grotesk",
+    fontHead: "Fraunces",
+    radius: 10,
+    shadow: 24,
   },
   {
     name: "Sunset Paper",
@@ -1834,12 +1849,62 @@ async function clearCanvasSiteAccess() {
 
 function setPill(connected) {
   if (connected) {
-    statusPill.textContent = "Connected";
+    statusPill.textContent = "Live";
     statusPill.classList.add("connected");
+    if (connectionStateEl) {
+      connectionStateEl.textContent = "Connected and updating normally";
+    }
   } else {
-    statusPill.textContent = "Not connected";
+    statusPill.textContent = "Offline";
     statusPill.classList.remove("connected");
+    if (connectionStateEl) {
+      connectionStateEl.textContent = "Add your Canvas school to connect";
+    }
   }
+}
+
+function syncConnectionSummary(baseUrl = "") {
+  if (!connectionNameEl) return;
+  const normalized = normalizeBaseUrl(baseUrl || baseUrlInput?.value || "");
+  if (!normalized) {
+    connectionNameEl.textContent = "Canvas connection";
+    return;
+  }
+  try {
+    const host = new URL(normalized).hostname.replace(/\.instructure\.com$/i, "");
+    const schoolName = host
+      .split(/[.-]/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+    connectionNameEl.textContent = schoolName
+      ? `${schoolName} Canvas`
+      : "Canvas connection";
+  } catch (error) {
+    connectionNameEl.textContent = "Canvas connection";
+  }
+}
+
+function syncGreeting() {
+  if (!timeGreetingEl) return;
+  const hour = new Date().getHours();
+  timeGreetingEl.textContent =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
+function syncQuickAccountSummary(session = null) {
+  if (!quickAccountNameEl || !quickAccountAvatarEl) return;
+  const effective = getEffectiveSession(session);
+  const fallbackEmail = String(effective?.user?.email || "").split("@")[0];
+  const name = String(currentProfileUsername || fallbackEmail || "QuickCanvas account");
+  quickAccountNameEl.textContent = name;
+  const initials = name
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+  quickAccountAvatarEl.textContent = initials || "QC";
 }
 
 function clamp(value, min, max) {
@@ -2177,6 +2242,7 @@ async function loadTheme(allowSavedTheme = true) {
       }
     : getDefaultPopupTheme();
   applyThemeToInputs(theme);
+  syncActivePreset();
 }
 
 async function saveTheme() {
@@ -2203,8 +2269,16 @@ function renderPresets() {
       preset.bg || (preset.mode === "dark" ? "#0f172a" : "#f8fafc");
     const presetSurface =
       preset.surface || (preset.mode === "dark" ? "#172033" : "#ffffff");
+    const subtitle =
+      index === 0
+        ? "Warm canvas · academic blue"
+        : index === 1
+          ? "Soft cream · terracotta"
+          : index === 2
+            ? "Deep slate · cool blue"
+            : `${preset.mode === "dark" ? "Dark" : "Light"} · ${preset.accent}`;
     return `
-      <button class="preset" type="button" data-index="${index}" data-name="${preset.name}" style="--preset-accent:${preset.accent};--preset-bg:${presetBg};--preset-surface:${presetSurface};--preset-text:${preset.text}">
+      <button class="preset${index === 0 ? " is-active" : ""}" type="button" data-index="${index}" data-name="${preset.name}" style="--preset-accent:${preset.accent};--preset-bg:${presetBg};--preset-surface:${presetSurface};--preset-text:${preset.text}">
         <div class="preset-preview" aria-hidden="true">
           <div class="preset-preview-nav">
             <span></span><span></span><span></span>
@@ -2217,12 +2291,14 @@ function renderPresets() {
         </div>
         <div class="preset-footer">
           <div class="preset-title">${preset.name}</div>
+          <span class="preset-subtitle">${subtitle}</span>
           <div class="preset-swatches">
             <span class="preset-swatch" style="background:${preset.accent}"></span>
             <span class="preset-swatch" style="background:${presetSurface}"></span>
             <span class="preset-swatch" style="background:${presetBg}"></span>
           </div>
         </div>
+        <span class="preset-choice" aria-hidden="true">✓</span>
       </button>
     `;
   }).join("");
@@ -2250,8 +2326,26 @@ function renderPresets() {
       radiusScaleInput.value = Number(preset.radius ?? 12);
       shadowStrengthInput.value = Number(preset.shadow ?? 45);
       themeNameInput.value = preset.name || button.dataset.name || "";
+      presetGrid.querySelectorAll(".preset").forEach((item) => {
+        item.classList.toggle("is-active", item === button);
+      });
       await saveTheme();
     });
+  });
+}
+
+function syncActivePreset() {
+  if (!presetGrid) return;
+  const currentAccent = String(accentColorInput?.value || "").toLowerCase();
+  let matched = false;
+  presetGrid.querySelectorAll(".preset").forEach((button) => {
+    const preset = PRESETS[Number(button.dataset.index)];
+    const isMatch =
+      !matched &&
+      Boolean(preset) &&
+      String(preset.accent || "").toLowerCase() === currentAccent;
+    button.classList.toggle("is-active", isMatch);
+    if (isMatch) matched = true;
   });
 }
 
@@ -2269,6 +2363,7 @@ async function loadSettings() {
   if (!canvasSettings) {
     await clearCanvasSiteAccess();
     setPill(false);
+    syncConnectionSummary("");
     enabledInput.checked = true;
     if (calendarRemindersEnabledInput) {
       calendarRemindersEnabledInput.checked = Boolean(calendarRemindersEnabled);
@@ -2277,6 +2372,7 @@ async function loadSettings() {
   }
 
   baseUrlInput.value = canvasSettings.baseUrl || "";
+  syncConnectionSummary(canvasSettings.baseUrl || "");
   enabledInput.checked = canvasSettings.enabled ?? true;
   if (calendarRemindersEnabledInput) {
     calendarRemindersEnabledInput.checked = Boolean(calendarRemindersEnabled);
@@ -2360,6 +2456,7 @@ async function saveSettings() {
   };
 
   if (!baseUrl) {
+    syncConnectionSummary("");
     await saveReminderPreference();
     const calendarConnected = await ensureGoogleCalendarConnected();
     if (!calendarConnected && calendarRemindersEnabled) {
@@ -2382,6 +2479,7 @@ async function saveSettings() {
       enabled,
     },
   });
+  syncConnectionSummary(baseUrl);
   await saveReminderPreference();
   const calendarConnected = await ensureGoogleCalendarConnected();
 
@@ -2431,6 +2529,7 @@ async function clearSettings() {
   }
   setStatus("Settings cleared. Canvas site access removed.");
   setPill(false);
+  syncConnectionSummary("");
 }
 
 async function openCanvas() {
@@ -2440,6 +2539,16 @@ async function openCanvas() {
     return;
   }
   chrome.tabs.create({ url: baseUrl });
+}
+
+async function openDashboard() {
+  const baseUrl = normalizeBaseUrl(baseUrlInput.value);
+  if (!baseUrl) {
+    connectionPanel?.classList.add("is-expanded");
+    setStatus("Add your Canvas base URL first.", true);
+    return;
+  }
+  chrome.tabs.create({ url: `${baseUrl}/` });
 }
 
 function openOptions() {
@@ -3467,6 +3576,7 @@ async function loadProfile() {
   }
 
   currentProfileUsername = username;
+  syncQuickAccountSummary(session);
   if (username) {
     displayNameInput.value = username;
   }
@@ -3763,6 +3873,7 @@ async function saveProfile() {
       );
     }
     currentProfileUsername = username;
+    syncQuickAccountSummary(session);
     authUsernameInput.value = username;
     if (profileSchoolStartInput) {
       profileSchoolStartInput.value =
@@ -5492,6 +5603,7 @@ function updateAuthUI(session) {
   if (adminTabBtn) {
     adminTabBtn.hidden = !signedIn || !isAdmin(session);
   }
+  syncQuickAccountSummary(session);
 }
 
 saveBtn.addEventListener(
@@ -5510,6 +5622,53 @@ openOptionsBtn.addEventListener(
   "click",
   withUiError("Open options failed", openOptions),
 );
+if (openDashboardBtn) {
+  openDashboardBtn.addEventListener(
+    "click",
+    withUiError("Open dashboard failed", openDashboard),
+  );
+}
+if (togglePresetsBtn) {
+  togglePresetsBtn.addEventListener("click", () => {
+    const expanded = !presetGrid.classList.contains("is-expanded");
+    presetGrid.classList.toggle("is-expanded", expanded);
+    communityPanel?.classList.toggle("is-expanded", expanded);
+    togglePresetsBtn.textContent = expanded ? "Show fewer" : "Browse community";
+    if (expanded) {
+      loadCommunityThemes(
+        sortLatestBtn.classList.contains("is-active") ? "latest" : "trending",
+        { force: true },
+      ).catch(() => {});
+    }
+  });
+}
+const revealPopupPanel = (panel, { openDetails = false } = {}) => {
+  if (!panel) return;
+  panel.classList.add("is-expanded");
+  if (openDetails) {
+    const details = panel.querySelector("details");
+    if (details) details.open = true;
+  }
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+appearanceQuickBtn?.addEventListener("click", () =>
+  revealPopupPanel(themeEditorPanel),
+);
+customThemeQuickBtn?.addEventListener("click", () =>
+  revealPopupPanel(themeEditorPanel, { openDetails: true }),
+);
+remindersQuickBtn?.addEventListener("click", () =>
+  revealPopupPanel(connectionPanel),
+);
+cloudThemesQuickBtn?.addEventListener("click", async () => {
+  setActiveTab("account");
+  if (accountCloudPanel && isUiSignedIn) {
+    accountCloudPanel.hidden = false;
+    await loadCloudThemes({ force: true });
+    accountCloudPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+});
+manageAccountQuickBtn?.addEventListener("click", () => setActiveTab("account"));
 enabledInput.addEventListener(
   "change",
   withUiError("Toggle dashboard failed", saveSettings),
@@ -5709,6 +5868,7 @@ if (supabaseClient) {
     setAuthMode("signin");
     setActiveTab(getStoredActiveTab() || "account");
     renderFontOptions();
+    syncGreeting();
     renderPresets();
     await Promise.all([
       loadForceSignedOutState(),

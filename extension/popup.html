@@ -10,17 +10,18 @@
         <main class="app">
             <header class="top">
                 <div class="brand-lockup">
-                    <div class="brand-mark" aria-hidden="true">
-                        <span>Q</span>
-                    </div>
+                    <img
+                        class="brand-mark"
+                        src="icons/icon128.png"
+                        alt="QuickCanvas"
+                    />
                     <div>
                         <p class="eyebrow">QuickCanvas</p>
-                        <h1>Make Canvas yours.</h1>
-                        <p class="sub">One calm place for everything due.</p>
+                        <h1>Learning control center</h1>
                     </div>
                 </div>
                 <div id="statusPill" class="pill" aria-live="polite">
-                    Not connected
+                    Offline
                 </div>
             </header>
             <p id="globalStatus" class="status" role="status" aria-live="polite"></p>
@@ -57,10 +58,20 @@
                 </button>
             </nav>
 
-            <section class="panel theme-editor-panel" data-pane="themes">
-                <div class="panel-header">
-                    <h2>Make it yours</h2>
+            <section class="popup-overview" data-pane="themes">
+                <div class="popup-welcome">
+                    <div>
+                        <p id="timeGreeting" class="panel-kicker">Good afternoon</p>
+                        <h2>Make Canvas yours.</h2>
+                    </div>
+                    <button id="openDashboard" class="dashboard-link" type="button">
+                        Open dashboard ↗
+                    </button>
                 </div>
+            </section>
+
+            <section class="panel theme-editor-panel" data-pane="themes">
+                <div class="panel-header"><h2>Appearance</h2></div>
                 <details class="theme-advanced">
                     <summary>Fine-tune colors, type, and spacing</summary>
                     <div class="theme-advanced-body">
@@ -199,8 +210,11 @@
             </section>
 
             <section class="panel preset-panel" data-pane="themes">
-                <div class="panel-header">
-                    <h2>Choose a vibe</h2>
+                <div class="panel-header preset-panel-header">
+                    <h2>Current theme</h2>
+                    <button id="togglePresets" class="text-action" type="button">
+                        Browse community
+                    </button>
                 </div>
                 <div id="presetGrid" class="preset-grid"></div>
             </section>
@@ -229,16 +243,18 @@
             </section>
 
             <section class="panel connection-panel" data-pane="themes">
-                <div class="panel-header">
-                    <div>
-                        <p class="panel-kicker">Start here</p>
-                        <h2>Connect Canvas</h2>
+                <div class="connection-summary">
+                    <span class="connection-note-icon" aria-hidden="true">✓</span>
+                    <div class="connection-summary-copy">
+                        <strong id="connectionName">Canvas</strong>
+                        <span id="connectionState">Not connected</span>
                     </div>
                     <label class="switch">
                         <input id="enabled" type="checkbox" />
-                            <span>Dashboard on</span>
+                        <span class="visually-hidden">QuickCanvas dashboard enabled</span>
                     </label>
                 </div>
+                <div class="connection-details">
                 <div class="field">
                     <label class="switch">
                         <input id="calendarRemindersEnabled" type="checkbox" />
@@ -281,7 +297,39 @@
                     </button>
                 </div>
                 <p id="status" class="status" role="status" aria-live="polite"></p>
+                </div>
             </section>
+
+            <section class="quick-controls" data-pane="themes">
+                <h2>Quick controls</h2>
+                <div class="quick-control-grid">
+                    <button id="appearanceQuick" class="quick-control" type="button">
+                        <span class="quick-control-icon" aria-hidden="true">◐</span>
+                        <span><strong>Appearance</strong><small>Mode, color, type</small></span>
+                    </button>
+                    <button id="remindersQuick" class="quick-control" type="button">
+                        <span class="quick-control-icon" aria-hidden="true">⌁</span>
+                        <span><strong>Reminders</strong><small>Due-date alerts</small></span>
+                    </button>
+                    <button id="customThemeQuick" class="quick-control" type="button">
+                        <span class="quick-control-icon" aria-hidden="true">＋</span>
+                        <span><strong>Custom theme</strong><small>Build your own</small></span>
+                    </button>
+                    <button id="cloudThemesQuick" class="quick-control" type="button">
+                        <span class="quick-control-icon" aria-hidden="true">☁</span>
+                        <span><strong>Cloud themes</strong><small>Synced designs</small></span>
+                    </button>
+                </div>
+            </section>
+
+            <footer class="popup-account-summary" data-pane="themes">
+                <span id="quickAccountAvatar" class="quick-account-avatar">QC</span>
+                <div>
+                    <strong id="quickAccountName">QuickCanvas account</strong>
+                    <span>Theme sync and profile</span>
+                </div>
+                <button id="manageAccountQuick" type="button">Manage</button>
+            </footer>
 
             <section class="panel" data-pane="account" hidden>
                 <div class="panel-header">

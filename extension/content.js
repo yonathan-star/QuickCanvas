@@ -2784,8 +2784,12 @@
             <h2>Your learning dashboard</h2>
             <p>Assignments, course activity, and personal plans in one flexible workspace.</p>
           </div>
-          <div class="cfe-actions">
+          <div class="cfe-header-controls">
             <button class="cfe-edit-layout" type="button">Edit layout</button>
+            <button class="cfe-refresh" type="button">Refresh</button>
+          </div>
+        </div>
+        <div class="cfe-actions">
             <button class="cfe-filter is-active" data-filter="nextdue" type="button">Next Due Date</button>
             <button class="cfe-filter" data-filter="week" type="button">Week</button>
             <button class="cfe-filter" data-filter="month" type="button">Month</button>
@@ -2797,8 +2801,6 @@
                 <button id="cfe-date-filter-btn" class="cfe-filter" data-filter="custom" type="button">Go</button>
               </div>
             </div>
-            <button class="cfe-refresh" type="button">Refresh</button>
-          </div>
         </div>
         <div class="cfe-widget-dock" id="cfe-widget-dock"></div>
         <div class="cfe-grid cfe-widget-canvas" id="cfe-widget-canvas">
@@ -3087,26 +3089,26 @@
       filterBarLayout: "horizontal",
       positions: {
         assignments: { left: 0, top: 0 },
-        progress: { left: 780, top: 0 },
-        tasks: { left: 0, top: 340 },
-        personal: { left: 640, top: 340 },
-        filterbar: { left: 960, top: 340 },
-        quicklinks: { left: 0, top: 660 },
-        eventsmini: { left: 320, top: 660 },
-        announcementsmini: { left: 640, top: 660 },
+        progress: { left: 670, top: 0 },
+        tasks: { left: 0, top: 320 },
+        personal: { left: 570, top: 320 },
+        filterbar: { left: 855, top: 320 },
+        quicklinks: { left: 0, top: 600 },
+        eventsmini: { left: 285, top: 600 },
+        announcementsmini: { left: 570, top: 600 },
       },
       sizes: {
-        assignments: { width: 760, height: 320 },
-        progress: { width: 460, height: 320 },
-        tasks: { width: 620, height: 300 },
-        personal: { width: 300, height: 300 },
-        filterbar: { width: 280, height: 300 },
-        quicklinks: { width: 300, height: 220 },
-        eventsmini: { width: 300, height: 220 },
-        announcementsmini: { width: 300, height: 220 },
+        assignments: { width: 650, height: 300 },
+        progress: { width: 450, height: 300 },
+        tasks: { width: 550, height: 260 },
+        personal: { width: 265, height: 260 },
+        filterbar: { width: 265, height: 260 },
+        quicklinks: { width: 265, height: 210 },
+        eventsmini: { width: 265, height: 210 },
+        announcementsmini: { width: 265, height: 210 },
       },
     };
-    const DASHBOARD_LAYOUT_VERSION = 7;
+    const DASHBOARD_LAYOUT_VERSION = 8;
     const dashboardWidgetCatalog = [
       { id: "assignments", label: "Assignments" },
       { id: "progress", label: "Progress Ring" },
