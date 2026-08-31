@@ -5244,35 +5244,10 @@ body.cfe-theme-applied:not(.cfe-theme-dark) #global_nav #primaryNavToggle * {
     stroke: currentColor !important;
 }
 
-body.cfe-theme-applied .ic-app-header__logomark,
-body.cfe-theme-applied .ic-app-header__logomark-container,
-body.cfe-theme-applied .ic-app-header__logo-container,
-body.cfe-theme-applied .ic-app-header__logo-link {
-    min-height: 76px !important;
-    height: 76px !important;
-}
-
 body.cfe-theme-applied .ic-app-header__logomark img,
 body.cfe-theme-applied .ic-app-header__logo img,
 body.cfe-theme-applied #global_nav .ic-app-header__logo img {
-    width: 38px !important;
-    height: 38px !important;
-    max-width: 38px !important;
-    max-height: 38px !important;
     object-fit: contain !important;
-    border-radius: 9px !important;
-}
-
-body.cfe-theme-applied #global_nav .ic-app-header__menu-list-link {
-    min-height: 58px !important;
-    padding-top: 5px !important;
-    padding-bottom: 5px !important;
-}
-
-body.cfe-theme-applied #global_nav .menu-item__text,
-body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item__text {
-    font-size: 11px !important;
-    line-height: 1.15 !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

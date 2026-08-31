@@ -1,7 +1,7 @@
 ﻿{
   "manifest_version": 3,
   "name": "QuickCanvas",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "A faster, unified Canvas workspace with a customizable dashboard, assignments, grades, due dates, and calendar.",
   "permissions": [
     "storage",

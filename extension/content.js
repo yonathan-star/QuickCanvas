@@ -1010,8 +1010,14 @@
     rootStyle.setProperty("--cfe-danger", mode === "dark" ? "#f08d8d" : "#a43f3f");
     rootStyle.setProperty("--cfe-danger-soft", mode === "dark" ? "#482222" : "#faeaea");
     rootStyle.setProperty("--cfe-focus", mixColors(accent, mode === "dark" ? "#ffffff" : "#8fd3ff", 0.45));
-    rootStyle.setProperty("--cfe-font-body", fontBody);
-    rootStyle.setProperty("--cfe-font-head", fontHead);
+    rootStyle.setProperty(
+      "--cfe-font-body",
+      `${fontBody}, "Trebuchet MS", Arial, sans-serif`,
+    );
+    rootStyle.setProperty(
+      "--cfe-font-head",
+      `${fontHead}, Georgia, "Times New Roman", serif`,
+    );
 
     const radiusValue = clamp(radius, 6, 22);
     rootStyle.setProperty("--cfe-radius", `${radiusValue}px`);
@@ -1174,8 +1180,14 @@
     rootStyle.setProperty("--cfe-danger", mode === "dark" ? "#f08d8d" : "#a43f3f");
     rootStyle.setProperty("--cfe-danger-soft", mode === "dark" ? "#482222" : "#faeaea");
     rootStyle.setProperty("--cfe-focus", mixColors(accent, mode === "dark" ? "#ffffff" : "#8fd3ff", 0.45));
-    rootStyle.setProperty("--cfe-font-body", fontBody);
-    rootStyle.setProperty("--cfe-font-head", fontHead);
+    rootStyle.setProperty(
+      "--cfe-font-body",
+      `${fontBody}, "Trebuchet MS", Arial, sans-serif`,
+    );
+    rootStyle.setProperty(
+      "--cfe-font-head",
+      `${fontHead}, Georgia, "Times New Roman", serif`,
+    );
 
     const radiusValue = clamp(radius, 6, 22);
     rootStyle.setProperty("--cfe-radius", `${radiusValue}px`);
