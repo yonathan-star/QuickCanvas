@@ -2,6 +2,16 @@
   const scriptInstanceId = `cfe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   window.__cfeActiveInstanceId = scriptInstanceId;
 
+  try {
+    const quickCanvasIconUrl = chrome.runtime.getURL("icons/icon48.png");
+    document.documentElement.style.setProperty(
+      "--cfe-brand-icon",
+      `url("${quickCanvasIconUrl}")`,
+    );
+  } catch (error) {
+    // The normal Canvas render can continue with the existing school mark.
+  }
+
   function isStaleInstance() {
     return window.__cfeActiveInstanceId !== scriptInstanceId;
   }

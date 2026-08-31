@@ -9,7 +9,7 @@ Canvas OAuth is still the supported option for a standalone or multi-school
 service. It requires an administrator-enabled Developer Key and a trusted
 backend for the client secret; never embed that secret in this extension.
 
-Version 0.7.5 implements the approved Calm Workspace popup at its native
+Version 0.7.6 implements the approved Calm Workspace popup at its native
 measurements and migrates the dashboard to the approved clean 12-column layout.
 Normal viewing keeps stable card sizes and concise previews; Edit Layout still
 supports dragging, resizing, removing, and restoring widgets.

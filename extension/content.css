@@ -5304,7 +5304,7 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
         padding: 0 !important;
         border: 0 !important;
         border-radius: 10px !important;
-        background: #ffffff url("icons/icon48.png") center / 40px 40px no-repeat !important;
+        background: #ffffff var(--cfe-brand-icon, none) center / 40px 40px no-repeat !important;
         box-shadow: 0 7px 18px rgba(4, 13, 20, 0.22) !important;
     }
 
@@ -5326,6 +5326,8 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
         flex-direction: column !important;
         align-items: stretch !important;
         list-style: none !important;
+        background: var(--cfe-nav-bg, #152b3a) !important;
+        background-color: var(--cfe-nav-bg, #152b3a) !important;
     }
 
     body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item,
@@ -5337,6 +5339,8 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
         margin: 0 !important;
         padding: 0 !important;
         flex: 0 0 56px !important;
+        background: var(--cfe-nav-bg, #152b3a) !important;
+        background-color: var(--cfe-nav-bg, #152b3a) !important;
     }
 
     body.cfe-theme-applied #global_nav .ic-app-header__menu-list-link,
@@ -5393,8 +5397,8 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
         overflow: hidden !important;
         transform: none !important;
         color: currentColor !important;
-        font-size: 9px !important;
-        font-weight: 500 !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
         line-height: 1.1 !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
@@ -5478,8 +5482,8 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
         overflow: hidden !important;
         transform: none !important;
         color: currentColor !important;
-        font-size: 9px !important;
-        font-weight: 500 !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
         line-height: 1.1 !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
