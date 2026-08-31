@@ -659,9 +659,27 @@
     const nav = document.getElementById("global_nav");
     if (!nav) return;
 
-    const isDark = document.body?.classList.contains("cfe-theme-dark");
-    const navText = isDark ? "#f8fafc" : "#1f2a33";
-    const navActiveText = isDark ? "#ffffff" : "#111827";
+    const navBg = getRootVar("--cfe-nav-bg", "#152b3a");
+    const navText = getRootVar("--cfe-nav-text", "#f8fafc");
+    const navActiveText = getRootVar("--cfe-nav-active-text", "#ffffff");
+
+    const navShell = nav.closest(".ic-app-header") ||
+      document.querySelector(".ic-app-header");
+    [
+      navShell,
+      nav,
+      navShell?.querySelector(".ic-app-header__main-navigation"),
+      navShell?.querySelector(".ic-app-header__primary"),
+      navShell?.querySelector(".ic-app-header__secondary-navigation"),
+      navShell?.querySelector(".ic-app-header__logomark"),
+      navShell?.querySelector(".ic-app-header__logomark-container"),
+      navShell?.querySelector(".ic-app-header__logo-container"),
+    ].forEach((node) => {
+      if (!node) return;
+      setStyleImportant(node, "background", navBg);
+      setStyleImportant(node, "background-color", navBg);
+      setStyleImportant(node, "color", navText);
+    });
 
     setStyleImportant(nav, "color", navText);
     setStyleImportant(nav, "-webkit-text-fill-color", navText);

@@ -5217,6 +5217,64 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
     }
 }
 
+/* Match the approved dark product rail on the real Canvas shell. Canvas puts
+   the school brand background on the outer header, not only #global_nav. */
+body.cfe-theme-applied .ic-app-header,
+body.cfe-theme-applied .ic-app-header__main-navigation,
+body.cfe-theme-applied .ic-app-header__primary,
+body.cfe-theme-applied .ic-app-header__secondary-navigation,
+body.cfe-theme-applied .ic-app-header__logomark,
+body.cfe-theme-applied .ic-app-header__logomark-container,
+body.cfe-theme-applied .ic-app-header__logo-container,
+body.cfe-theme-applied .ic-app-header__logo-link,
+body.cfe-theme-applied #global_nav {
+    background: var(--cfe-nav-bg, #152b3a) !important;
+    background-color: var(--cfe-nav-bg, #152b3a) !important;
+    border-color: var(--cfe-nav-divider, #355064) !important;
+}
+
+body.cfe-theme-applied:not(.cfe-theme-dark) #global_nav,
+body.cfe-theme-applied:not(.cfe-theme-dark) #global_nav [id^="global_nav_"][id$="_link"],
+body.cfe-theme-applied:not(.cfe-theme-dark) #global_nav [id^="global_nav_"][id$="_link"] *,
+body.cfe-theme-applied:not(.cfe-theme-dark) #global_nav #primaryNavToggle,
+body.cfe-theme-applied:not(.cfe-theme-dark) #global_nav #primaryNavToggle * {
+    color: var(--cfe-nav-text, #f8fafc) !important;
+    -webkit-text-fill-color: var(--cfe-nav-text, #f8fafc) !important;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+}
+
+body.cfe-theme-applied .ic-app-header__logomark,
+body.cfe-theme-applied .ic-app-header__logomark-container,
+body.cfe-theme-applied .ic-app-header__logo-container,
+body.cfe-theme-applied .ic-app-header__logo-link {
+    min-height: 76px !important;
+    height: 76px !important;
+}
+
+body.cfe-theme-applied .ic-app-header__logomark img,
+body.cfe-theme-applied .ic-app-header__logo img,
+body.cfe-theme-applied #global_nav .ic-app-header__logo img {
+    width: 38px !important;
+    height: 38px !important;
+    max-width: 38px !important;
+    max-height: 38px !important;
+    object-fit: contain !important;
+    border-radius: 9px !important;
+}
+
+body.cfe-theme-applied #global_nav .ic-app-header__menu-list-link {
+    min-height: 58px !important;
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+}
+
+body.cfe-theme-applied #global_nav .menu-item__text,
+body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item__text {
+    font-size: 11px !important;
+    line-height: 1.15 !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
     body.cfe-theme-applied *,
     body.cfe-theme-applied *::before,
