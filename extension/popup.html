@@ -9,19 +9,26 @@
     <body>
         <main class="app">
             <header class="top">
-                <div class="brand-lockup">
-                    <img
-                        class="brand-mark"
-                        src="icons/icon128.png"
-                        alt="QuickCanvas"
-                    />
-                    <div>
-                        <p class="eyebrow">QuickCanvas</p>
-                        <h1>Learning control center</h1>
+                <div class="top-row">
+                    <div class="brand-lockup">
+                        <img
+                            class="brand-mark"
+                            src="icons/icon128.png"
+                            alt="QuickCanvas"
+                        />
+                        <div>
+                            <p class="eyebrow">QuickCanvas</p>
+                            <h1>Your workspace</h1>
+                        </div>
+                    </div>
+                    <div id="statusPill" class="pill" aria-live="polite">
+                        Offline
                     </div>
                 </div>
-                <div id="statusPill" class="pill" aria-live="polite">
-                    Offline
+                <div class="top-school">
+                    <span>Canvas school</span>
+                    <strong id="headerSchoolHost">Not connected</strong>
+                    <button id="openDashboard" type="button">Open ↗</button>
                 </div>
             </header>
             <p id="globalStatus" class="status" role="status" aria-live="polite"></p>
@@ -58,22 +65,91 @@
                 </button>
             </nav>
 
-            <section class="popup-overview" data-pane="themes">
-                <div class="popup-welcome">
+            <section class="panel connection-panel" data-pane="themes">
+                <div class="connection-card-head">
                     <div>
-                        <p id="timeGreeting" class="panel-kicker">Good afternoon</p>
-                        <h2>Make Canvas yours.</h2>
+                        <p class="panel-kicker">Everything is ready</p>
+                        <h2>Canvas connection</h2>
+                        <p id="connectionState" class="connection-copy">Add your Canvas school to get started.</p>
                     </div>
-                    <button id="openDashboard" class="dashboard-link" type="button">
-                        Open dashboard ↗
+                    <label class="switch">
+                        <input id="enabled" type="checkbox" />
+                        <span class="visually-hidden">QuickCanvas dashboard enabled</span>
+                    </label>
+                </div>
+                <div class="connection-origin">
+                    <span class="connection-origin-icon" aria-hidden="true">C</span>
+                    <div class="connection-summary-copy">
+                        <strong id="connectionName">Canvas school</strong>
+                        <span id="connectionUrl">Not connected</span>
+                    </div>
+                    <button id="changeConnection" class="text-action" type="button">Change</button>
+                </div>
+                <div class="connection-details">
+                <div class="field">
+                    <label class="switch">
+                        <input id="calendarRemindersEnabled" type="checkbox" />
+                        <span>
+                            Google Calendar sync (adds assignments + reminders)
+                        </span>
+                    </label>
+                    <p class="hint">
+                        Adds assignments to your Google Calendar and keeps
+                        desktop notifications about 1 hour before due dates.
+                    </p>
+                </div>
+
+                <div class="field">
+                    <label for="baseUrl">School Canvas URL</label>
+                    <input
+                        id="baseUrl"
+                        type="url"
+                        placeholder="https://your-school.instructure.com"
+                    />
+                    <p class="hint">
+                        Example: https://myschool.instructure.com
+                    </p>
+                </div>
+
+                <div class="connection-note">
+                    <span class="connection-note-icon" aria-hidden="true">✓</span>
+                    <p class="hint">
+                        QuickCanvas uses your signed-in Canvas browser session.
+                        No personal access token is needed or stored.
+                    </p>
+                </div>
+
+                <div class="actions">
+                    <button id="save" class="primary" type="button">
+                        Save connection
                     </button>
+                    <button id="clear" class="ghost" type="button">
+                        Reset
+                    </button>
+                </div>
+                <p id="status" class="status" role="status" aria-live="polite"></p>
                 </div>
             </section>
 
+            <section class="panel preset-panel" data-pane="themes">
+                <div class="panel-header preset-panel-header">
+                    <div>
+                        <h2>Choose a look</h2>
+                        <p class="section-copy">Applied instantly across Canvas.</p>
+                    </div>
+                    <button id="togglePresets" class="text-action" type="button">
+                        View all
+                    </button>
+                </div>
+                <div id="presetGrid" class="preset-grid"></div>
+            </section>
+
             <section class="panel theme-editor-panel" data-pane="themes">
-                <div class="panel-header"><h2>Appearance</h2></div>
                 <details class="theme-advanced">
-                    <summary>Fine-tune colors, type, and spacing</summary>
+                    <summary>
+                        <span><strong>Fine-tune your theme</strong><small>Colors, type, corners, shadows, and custom CSS</small></span>
+                        <b aria-hidden="true">⌄</b>
+                    </summary>
                     <div class="theme-advanced-body">
                 <div class="field-row">
                     <div class="field">
@@ -209,16 +285,6 @@
                 <p class="hint">Auto follows your system theme.</p>
             </section>
 
-            <section class="panel preset-panel" data-pane="themes">
-                <div class="panel-header preset-panel-header">
-                    <h2>Current theme</h2>
-                    <button id="togglePresets" class="text-action" type="button">
-                        Browse community
-                    </button>
-                </div>
-                <div id="presetGrid" class="preset-grid"></div>
-            </section>
-
             <section class="panel community-panel" data-pane="themes">
                 <div class="panel-header">
                     <h2>Discover themes</h2>
@@ -242,93 +308,9 @@
                 <div id="communityList" class="community-list"></div>
             </section>
 
-            <section class="panel connection-panel" data-pane="themes">
-                <div class="connection-summary">
-                    <span class="connection-note-icon" aria-hidden="true">✓</span>
-                    <div class="connection-summary-copy">
-                        <strong id="connectionName">Canvas</strong>
-                        <span id="connectionState">Not connected</span>
-                    </div>
-                    <label class="switch">
-                        <input id="enabled" type="checkbox" />
-                        <span class="visually-hidden">QuickCanvas dashboard enabled</span>
-                    </label>
-                </div>
-                <div class="connection-details">
-                <div class="field">
-                    <label class="switch">
-                        <input id="calendarRemindersEnabled" type="checkbox" />
-                        <span>
-                            Google Calendar sync (adds assignments + reminders)
-                        </span>
-                    </label>
-                    <p class="hint">
-                        Adds assignments to your Google Calendar and keeps
-                        desktop notifications about 1 hour before due dates.
-                    </p>
-                </div>
-
-                <div class="field">
-                    <label for="baseUrl">School Canvas URL</label>
-                    <input
-                        id="baseUrl"
-                        type="url"
-                        placeholder="https://your-school.instructure.com"
-                    />
-                    <p class="hint">
-                        Example: https://myschool.instructure.com
-                    </p>
-                </div>
-
-                <div class="connection-note">
-                    <span class="connection-note-icon" aria-hidden="true">✓</span>
-                    <p class="hint">
-                        QuickCanvas uses your signed-in Canvas browser session.
-                        No personal access token is needed or stored.
-                    </p>
-                </div>
-
-                <div class="actions">
-                    <button id="save" class="primary" type="button">
-                        Save connection
-                    </button>
-                    <button id="clear" class="ghost" type="button">
-                        Reset
-                    </button>
-                </div>
-                <p id="status" class="status" role="status" aria-live="polite"></p>
-                </div>
-            </section>
-
-            <section class="quick-controls" data-pane="themes">
-                <h2>Quick controls</h2>
-                <div class="quick-control-grid">
-                    <button id="appearanceQuick" class="quick-control" type="button">
-                        <span class="quick-control-icon" aria-hidden="true">◐</span>
-                        <span><strong>Appearance</strong><small>Mode, color, type</small></span>
-                    </button>
-                    <button id="remindersQuick" class="quick-control" type="button">
-                        <span class="quick-control-icon" aria-hidden="true">⌁</span>
-                        <span><strong>Reminders</strong><small>Due-date alerts</small></span>
-                    </button>
-                    <button id="customThemeQuick" class="quick-control" type="button">
-                        <span class="quick-control-icon" aria-hidden="true">＋</span>
-                        <span><strong>Custom theme</strong><small>Build your own</small></span>
-                    </button>
-                    <button id="cloudThemesQuick" class="quick-control" type="button">
-                        <span class="quick-control-icon" aria-hidden="true">☁</span>
-                        <span><strong>Cloud themes</strong><small>Synced designs</small></span>
-                    </button>
-                </div>
-            </section>
-
-            <footer class="popup-account-summary" data-pane="themes">
-                <span id="quickAccountAvatar" class="quick-account-avatar">QC</span>
-                <div>
-                    <strong id="quickAccountName">QuickCanvas account</strong>
-                    <span>Theme sync and profile</span>
-                </div>
-                <button id="manageAccountQuick" type="button">Manage</button>
+            <footer class="popup-footer" data-pane="themes">
+                <span>QuickCanvas 0.7</span>
+                <button id="popupSettingsHelp" type="button">Settings &amp; help</button>
             </footer>
 
             <section class="panel" data-pane="account" hidden>

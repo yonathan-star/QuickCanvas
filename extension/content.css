@@ -2659,6 +2659,33 @@ body:not(.cfe-theme-dark) .cfe-personal-controls input[type="date"]::-webkit-cal
     background: var(--cfe-surface);
 }
 
+#cfe-dashboard .cfe-card-heading,
+#cfe-dashboard .cfe-progress-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+#cfe-dashboard .cfe-widget-kicker {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--cfe-muted);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+#cfe-dashboard .cfe-card-count,
+#cfe-dashboard .cfe-progress-summary {
+    color: var(--cfe-muted);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
 #cfe-dashboard .cfe-card h3,
 #cfe-dashboard .cfe-widget h3 {
     margin-top: 0;
@@ -2684,16 +2711,24 @@ body:not(.cfe-theme-dark) .cfe-personal-controls input[type="date"]::-webkit-cal
 }
 
 #cfe-dashboard .cfe-progress-card .cfe-progress-title {
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--cfe-muted);
-    margin: 0 0 6px;
-    text-align: center;
+    text-align: left;
+}
+
+#cfe-dashboard .cfe-progress-body {
+    display: grid;
+    grid-template-columns: minmax(118px, 0.8fr) minmax(150px, 1.2fr);
+    align-items: center;
+    gap: 18px;
 }
 
 #cfe-dashboard .cfe-progress-card .cfe-multi-ring {
-    padding: 2px 0 8px;
+    padding: 0;
+}
+
+#cfe-dashboard .cfe-progress-card .cfe-ring-chart {
+    width: 100%;
+    max-width: 148px;
+    margin: 0 auto;
 }
 
 #cfe-dashboard .cfe-progress-card .cfe-ring-center {
@@ -2705,19 +2740,44 @@ body:not(.cfe-theme-dark) .cfe-personal-controls input[type="date"]::-webkit-cal
 }
 
 #cfe-dashboard .cfe-progress-card .cfe-legend {
-    gap: 6px;
-    margin-top: 4px;
+    gap: 10px;
+    margin-top: 0;
 }
 
 #cfe-dashboard .cfe-progress-card .cfe-legend-row {
-    grid-template-columns: 9px 1fr auto;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
     font-size: 11px;
 }
 
-#cfe-dashboard .cfe-progress-card .cfe-legend-swatch {
-    width: 8px;
-    height: 8px;
+#cfe-dashboard .cfe-progress-card .cfe-legend-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+#cfe-dashboard .cfe-progress-card .cfe-legend-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#cfe-dashboard .cfe-progress-card .cfe-legend-track {
+    display: block;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--cfe-divider);
+}
+
+#cfe-dashboard .cfe-progress-card .cfe-legend-track > span {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
 }
 
 #cfe-dashboard .cfe-progress-card .cfe-legend-meta {
@@ -4657,14 +4717,20 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 }
 
 #cfe-dashboard {
-    width: min(1440px, calc(100% - 132px)) !important;
-    margin: 24px auto 48px 104px !important;
+    width: 1120px !important;
+    max-width: none !important;
+    margin:
+        var(--cfe-dashboard-margin-top, 24px)
+        0
+        var(--cfe-dashboard-margin-bottom, 48px)
+        var(--cfe-dashboard-margin-left, 104px) !important;
     padding: 8px 0 32px !important;
     background: transparent !important;
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
+    zoom: var(--cfe-dashboard-scale, 1);
 }
 
 #cfe-dashboard .cfe-header {
@@ -5021,11 +5087,6 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 }
 
 @media (max-width: 1180px) {
-    #cfe-dashboard {
-        width: calc(100% - 112px) !important;
-        margin-left: 96px !important;
-    }
-
     #cfe-dashboard .cfe-actions {
         align-items: flex-start;
         flex-wrap: wrap;
@@ -5038,11 +5099,6 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 }
 
 @media (max-width: 760px) {
-    #cfe-dashboard {
-        width: calc(100% - 24px) !important;
-        margin: 12px !important;
-    }
-
     #cfe-dashboard .cfe-header {
         display: block;
     }

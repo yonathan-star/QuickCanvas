@@ -9,11 +9,10 @@ Canvas OAuth is still the supported option for a standalone or multi-school
 service. It requires an administrator-enabled Developer Key and a trusted
 backend for the client secret; never embed that secret in this extension.
 
-Version 0.6 brings the approved Compact Command Center design into the real
-extension popup and aligns the movable dashboard with its approved two-row
-header, tighter widget grid, and warm QuickCanvas visual system. Course pages,
-modules, assignments, discussions, grades, calendar, settings, and quizzes use
-the same design language.
+Version 0.7 implements the approved Calm Workspace popup pixel-for-pixel and
+makes the dashboard scale its entire 12-column workspace to the available
+Canvas width. Movable widget coordinates remain editable while the normal view
+now fills the page instead of clustering in a fixed-width corner.
 
 - `extension/` contains the browser extension source.
 - `ad-kit/` contains the TikTok ad project and recording scripts.

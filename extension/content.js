@@ -2807,7 +2807,13 @@
           <div class="cfe-card cfe-dashboard-widget" id="cfe-assignments" data-widget-id="assignments" draggable="false">
             <button class="cfe-widget-drag-handle" type="button" data-widget-drag-handle="assignments" aria-label="Drag widget">Drag</button>
             <button class="cfe-widget-trash" type="button" data-widget-remove="assignments" aria-label="Delete widget">Trash</button>
-            <h3>Assignments</h3>
+            <div class="cfe-card-heading">
+              <div>
+                <span class="cfe-widget-kicker">Assignments</span>
+                <h3>Coming up</h3>
+              </div>
+              <span class="cfe-card-count" id="cfe-assignment-count">0 items</span>
+            </div>
             <div class="cfe-list" data-state="loading">
               <div class="cfe-loading">
                 <span class="cfe-spinner"></span>
@@ -3108,7 +3114,8 @@
         announcementsmini: { width: 265, height: 210 },
       },
     };
-    const DASHBOARD_LAYOUT_VERSION = 8;
+    const DASHBOARD_LOGICAL_WIDTH = 1120;
+    const DASHBOARD_LAYOUT_VERSION = 9;
     const dashboardWidgetCatalog = [
       { id: "assignments", label: "Assignments" },
       { id: "progress", label: "Progress Ring" },
@@ -3134,6 +3141,8 @@
     let lastFreeWidgetPositions = {};
     let widgetSizes = {};
     let freeDragState = null;
+    let dashboardRenderScale = 1;
+    let dashboardScaleFrame = 0;
     let suppressManualCompletionSync = false;
     let suppressManualCompletionSyncTimer = null;
     const canvasTimeZone =
@@ -3173,6 +3182,45 @@
         };
       });
       return next;
+    }
+
+    function updateDashboardRenderScale() {
+      if (!container || !widgetCanvasEl) return;
+      const viewportWidth = Math.max(
+        320,
+        document.documentElement.clientWidth || window.innerWidth || 1280,
+      );
+      const pageInset = viewportWidth <= 760 ? 24 : 132;
+      const availableWidth = Math.max(300, viewportWidth - pageInset);
+      dashboardRenderScale = clamp(
+        availableWidth / DASHBOARD_LOGICAL_WIDTH,
+        0.5,
+        2.6,
+      );
+      container.style.setProperty(
+        "--cfe-dashboard-scale",
+        String(dashboardRenderScale),
+      );
+      container.style.setProperty(
+        "--cfe-dashboard-margin-left",
+        `${(viewportWidth <= 760 ? 12 : 104) / dashboardRenderScale}px`,
+      );
+      container.style.setProperty(
+        "--cfe-dashboard-margin-top",
+        `${(viewportWidth <= 760 ? 12 : 24) / dashboardRenderScale}px`,
+      );
+      container.style.setProperty(
+        "--cfe-dashboard-margin-bottom",
+        `${48 / dashboardRenderScale}px`,
+      );
+    }
+
+    function scheduleDashboardRenderScale() {
+      if (dashboardScaleFrame) cancelAnimationFrame(dashboardScaleFrame);
+      dashboardScaleFrame = requestAnimationFrame(() => {
+        dashboardScaleFrame = 0;
+        updateDashboardRenderScale();
+      });
     }
 
     function stableSerialize(value) {
@@ -3478,7 +3526,7 @@
           const minimums = getWidgetResizeMinimums(
             widget,
             widgetId,
-            width > 0 ? width : widget.getBoundingClientRect().width,
+            width > 0 ? width : widget.offsetWidth,
           );
           const safeWidth =
             width > 0 ? Math.max(minimums.minWidth, Math.round(width)) : 0;
@@ -3576,9 +3624,8 @@
     function fitWidgetSizeToContent(widgetId) {
       const widget = getDashboardWidgetEl(widgetId);
       if (!(widget instanceof HTMLElement) || widget.hidden) return false;
-      const currentRect = widget.getBoundingClientRect();
-      const currentWidth = Math.round(currentRect.width || 0);
-      const currentHeight = Math.round(currentRect.height || 0);
+      const currentWidth = Math.round(widget.offsetWidth || 0);
+      const currentHeight = Math.round(widget.offsetHeight || 0);
       const minimums = getWidgetResizeMinimums(widget, widgetId, currentWidth);
       const nextWidth = Math.max(currentWidth, minimums.minWidth);
       // Keep width user-driven, but make height follow current content size.
@@ -3700,6 +3747,7 @@
       ensureWidgetResizeHandles();
       applyFilterBarLayout();
       renderWidgetDock();
+      scheduleDashboardRenderScale();
     }
 
     function applyDashboardWidgetLayout() {
@@ -3833,6 +3881,7 @@
           maxBottom = Math.max(maxBottom, top + height);
         });
       widgetCanvasEl.style.minHeight = `${Math.max(520, maxBottom + 24)}px`;
+      scheduleDashboardRenderScale();
     }
 
     function seedMissingFreePositionsFromCurrentDom() {
@@ -3846,8 +3895,14 @@
           if (freeWidgetPositions[widgetId]) return;
           const rect = widget.getBoundingClientRect();
           freeWidgetPositions[widgetId] = {
-            left: Math.max(0, rect.left - canvasRect.left),
-            top: Math.max(0, rect.top - canvasRect.top),
+            left: Math.max(
+              0,
+              (rect.left - canvasRect.left) / dashboardRenderScale,
+            ),
+            top: Math.max(
+              0,
+              (rect.top - canvasRect.top) / dashboardRenderScale,
+            ),
           };
         });
     }
@@ -4536,8 +4591,10 @@
         freeDragState = {
           widget,
           widgetId,
-          offsetX: event.clientX - widgetRect.left,
-          offsetY: event.clientY - widgetRect.top,
+          offsetX:
+            (event.clientX - widgetRect.left) / dashboardRenderScale,
+          offsetY:
+            (event.clientY - widgetRect.top) / dashboardRenderScale,
           canvasRect,
           pendingLeft: Number(widget.style.left?.replace("px", "") || 0),
           pendingTop: Number(widget.style.top?.replace("px", "") || 0),
@@ -4552,18 +4609,27 @@
         const { widget, offsetX, offsetY } = freeDragState;
         autoScrollViewport(event.clientY);
         const canvasRect = widgetCanvasEl.getBoundingClientRect();
-        const maxLeft = Math.max(0, canvasRect.width - widget.offsetWidth);
+        const maxLeft = Math.max(
+          0,
+          widgetCanvasEl.offsetWidth - widget.offsetWidth,
+        );
         const maxTop = Math.max(
           0,
           (widgetCanvasEl.offsetHeight || 600) + 900 - widget.offsetHeight,
         );
         const left = Math.min(
           maxLeft,
-          Math.max(0, event.clientX - canvasRect.left - offsetX),
+          Math.max(
+            0,
+            (event.clientX - canvasRect.left) / dashboardRenderScale - offsetX,
+          ),
         );
         const top = Math.min(
           maxTop,
-          Math.max(0, event.clientY - canvasRect.top - offsetY),
+          Math.max(
+            0,
+            (event.clientY - canvasRect.top) / dashboardRenderScale - offsetY,
+          ),
         );
         const step = snapToFit ? SNAP_GRID_STEP : 1;
         const snappedLeft = step > 1 ? Math.round(left / step) * step : left;
@@ -4623,7 +4689,6 @@
         if (!["e", "s", "se"].includes(dir)) return;
         const widgetId = widget.getAttribute("data-widget-id") || "";
         if (!widgetId) return;
-        const rect = widget.getBoundingClientRect();
         const left = Number(widget.style.left?.replace("px", "") || 0);
         const top = Number(widget.style.top?.replace("px", "") || 0);
         resizeState = {
@@ -4634,8 +4699,8 @@
           dir,
           startX: event.clientX,
           startY: event.clientY,
-          startWidth: rect.width,
-          startHeight: rect.height,
+          startWidth: widget.offsetWidth,
+          startHeight: widget.offsetHeight,
           left,
           top,
         };
@@ -4660,8 +4725,8 @@
           left,
           top,
         } = resizeState;
-        const dx = event.clientX - startX;
-        const dy = event.clientY - startY;
+        const dx = (event.clientX - startX) / dashboardRenderScale;
+        const dy = (event.clientY - startY) / dashboardRenderScale;
         const initialMinimums = getWidgetResizeMinimums(
           widget,
           widgetId,
@@ -4760,10 +4825,9 @@
         if (event && event.pointerId !== resizeState.pointerId) return;
         const { widget, widgetId } = resizeState;
         widget.classList.remove("is-resizing");
-        const rect = widget.getBoundingClientRect();
         widgetSizes[widgetId] = {
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
+          width: Math.round(widget.offsetWidth),
+          height: Math.round(widget.offsetHeight),
         };
         if (snapToFit) {
           const currentLeft = Number(widget.style.left?.replace("px", "") || 0);
@@ -5331,9 +5395,8 @@
       const syncPersonalWidgetHeightToContent = () => {
         const personalWidget = getDashboardWidgetEl("personal");
         if (!(personalWidget instanceof HTMLElement)) return;
-        const currentRect = personalWidget.getBoundingClientRect();
-        const currentWidth = Math.round(currentRect.width || 0);
-        const currentHeight = Math.round(currentRect.height || 0);
+        const currentWidth = Math.round(personalWidget.offsetWidth || 0);
+        const currentHeight = Math.round(personalWidget.offsetHeight || 0);
         const minimums = getWidgetResizeMinimums(
           personalWidget,
           "personal",
@@ -5593,20 +5656,27 @@
         .join("");
 
       completionWidgetEl.innerHTML = `
-        <div class="cfe-progress-title">Completion by class</div>
-        <div class="cfe-multi-ring">
-          <svg class="cfe-ring-chart" viewBox="0 0 ${ringSize} ${ringSize}" aria-label="Assignment completion by class">
-            ${ringSvg}
-            <text class="cfe-ring-center" x="50%" y="${ratioTextY}" text-anchor="middle" dominant-baseline="middle" style="font-size:${centerFontSize}px;">${previousRatio}%</text>
-            ${
-              showSubLabel
-                ? `<text class="cfe-ring-sub" x="50%" y="${subTextY}" text-anchor="middle" dominant-baseline="middle" style="font-size:${subFontSize}px;">${previousDone}/${previousTotalDisplay} done</text>`
-                : ""
-            }
-          </svg>
+        <div class="cfe-progress-heading">
+          <div>
+            <span class="cfe-widget-kicker">Completion by class</span>
+            <div class="cfe-progress-title">This week</div>
+          </div>
+          <span class="cfe-progress-summary">${completedCount} of ${totalCount} done</span>
         </div>
-        <div class="cfe-legend">
-          ${rowsBySlot
+        <div class="cfe-progress-body">
+          <div class="cfe-multi-ring">
+            <svg class="cfe-ring-chart" viewBox="0 0 ${ringSize} ${ringSize}" aria-label="Assignment completion by class">
+              ${ringSvg}
+              <text class="cfe-ring-center" x="50%" y="${ratioTextY}" text-anchor="middle" dominant-baseline="middle" style="font-size:${centerFontSize}px;">${previousRatio}%</text>
+              ${
+                showSubLabel
+                  ? `<text class="cfe-ring-sub" x="50%" y="${subTextY}" text-anchor="middle" dominant-baseline="middle" style="font-size:${subFontSize}px;">${previousDone}/${previousTotalDisplay} done</text>`
+                  : ""
+              }
+            </svg>
+          </div>
+          <div class="cfe-legend">
+            ${rowsBySlot
             .map((row, rowIndex) => {
               const color = getSeriesColor(
                 accent,
@@ -5622,12 +5692,15 @@
                 : 0;
               const safeRowName = escapeHtml(row.name || "Unknown course");
               return `<div class="cfe-legend-row">
-                <span class="cfe-legend-swatch" style="background:${color}"></span>
-                <span class="cfe-legend-name">${safeRowName}</span>
-                <span class="cfe-legend-meta">${row.done}/${row.total} (${rowPct}%)</span>
+                <span class="cfe-legend-label">
+                  <span class="cfe-legend-name">${safeRowName}</span>
+                  <span class="cfe-legend-meta">${row.done}/${row.total}</span>
+                </span>
+                <span class="cfe-legend-track"><span style="width:${rowPct}%;background:${color}"></span></span>
               </div>`;
             })
             .join("")}
+          </div>
         </div>
         <div class="cfe-ring-hover-tip" hidden></div>
       `;
@@ -5687,8 +5760,10 @@
           segment.addEventListener("pointermove", (event) => {
             if (hoverTip.hidden) return;
             const hostRect = completionWidgetEl.getBoundingClientRect();
-            const x = event.clientX - hostRect.left + 10;
-            const y = event.clientY - hostRect.top + 10;
+            const x =
+              (event.clientX - hostRect.left) / dashboardRenderScale + 10;
+            const y =
+              (event.clientY - hostRect.top) / dashboardRenderScale + 10;
             hoverTip.style.left = `${Math.max(6, x)}px`;
             hoverTip.style.top = `${Math.max(6, y)}px`;
           });
@@ -5711,9 +5786,8 @@
     function syncAssignmentsWidgetHeightToContent() {
       const assignmentsWidget = getDashboardWidgetEl("assignments");
       if (!(assignmentsWidget instanceof HTMLElement)) return;
-      const currentRect = assignmentsWidget.getBoundingClientRect();
-      const currentWidth = Math.round(currentRect.width || 0);
-      const currentHeight = Math.round(currentRect.height || 0);
+      const currentWidth = Math.round(assignmentsWidget.offsetWidth || 0);
+      const currentHeight = Math.round(assignmentsWidget.offsetHeight || 0);
       const minimums = getWidgetResizeMinimums(
         assignmentsWidget,
         "assignments",
@@ -5742,6 +5816,10 @@
 
     function renderAssignments(items) {
       if (!assignmentsEl) return;
+      const assignmentCountEl = container.querySelector("#cfe-assignment-count");
+      if (assignmentCountEl) {
+        assignmentCountEl.textContent = `${items.length} ${items.length === 1 ? "item" : "items"}`;
+      }
       if (!items.length) {
         assignmentsEl.textContent = "No assignments due in this range.";
         renderCompletionWidget(items);
@@ -6633,6 +6711,15 @@
       bindFreeDrag();
       bindWidgetResize();
       setLayoutEditMode(false);
+      window.addEventListener("resize", scheduleDashboardRenderScale, {
+        passive: true,
+      });
+      window.visualViewport?.addEventListener(
+        "resize",
+        scheduleDashboardRenderScale,
+        { passive: true },
+      );
+      scheduleDashboardRenderScale();
     }
     loadData();
     renderPersonalTodos();

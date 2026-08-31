@@ -10,19 +10,14 @@ const openOptionsBtn = document.getElementById("openOptions");
 const statusEl = document.getElementById("status");
 const globalStatusEl = document.getElementById("globalStatus");
 const statusPill = document.getElementById("statusPill");
-const timeGreetingEl = document.getElementById("timeGreeting");
 const openDashboardBtn = document.getElementById("openDashboard");
+const headerSchoolHostEl = document.getElementById("headerSchoolHost");
 const connectionNameEl = document.getElementById("connectionName");
 const connectionStateEl = document.getElementById("connectionState");
+const connectionUrlEl = document.getElementById("connectionUrl");
+const changeConnectionBtn = document.getElementById("changeConnection");
 const togglePresetsBtn = document.getElementById("togglePresets");
-const appearanceQuickBtn = document.getElementById("appearanceQuick");
-const remindersQuickBtn = document.getElementById("remindersQuick");
-const customThemeQuickBtn = document.getElementById("customThemeQuick");
-const cloudThemesQuickBtn = document.getElementById("cloudThemesQuick");
-const manageAccountQuickBtn = document.getElementById("manageAccountQuick");
-const quickAccountNameEl = document.getElementById("quickAccountName");
-const quickAccountAvatarEl = document.getElementById("quickAccountAvatar");
-const themeEditorPanel = document.querySelector(".theme-editor-panel");
+const popupSettingsHelpBtn = document.getElementById("popupSettingsHelp");
 const connectionPanel = document.querySelector(".connection-panel");
 const communityPanel = document.querySelector(".community-panel");
 
@@ -221,21 +216,21 @@ const PRESETS = [
     shadow: 24,
   },
   {
-    name: "Sunset Paper",
+    name: "Forest Notes",
     mode: "light",
-    accent: "#f97316",
-    bg: "#fff7ed",
-    surface: "#fffdf9",
-    surfaceAlt: "#ffedd5",
-    border: "#fed7aa",
-    text: "#3b2a1e",
-    muted: "#8a6a52",
-    bgIntensity: 34,
-    surfaceContrast: 56,
-    fontBody: "DM Sans",
-    fontHead: "Cinzel",
-    radius: 11,
-    shadow: 24,
+    accent: "#3d805d",
+    bg: "#f2f6f0",
+    surface: "#ffffff",
+    surfaceAlt: "#edf4ed",
+    border: "#d8e5d8",
+    text: "#243329",
+    muted: "#68786d",
+    bgIntensity: 24,
+    surfaceContrast: 54,
+    fontBody: "Space Grotesk",
+    fontHead: "Fraunces",
+    radius: 10,
+    shadow: 20,
   },
   {
     name: "Sage Studio",
@@ -1849,10 +1844,10 @@ async function clearCanvasSiteAccess() {
 
 function setPill(connected) {
   if (connected) {
-    statusPill.textContent = "Live";
+    statusPill.textContent = "Connected";
     statusPill.classList.add("connected");
     if (connectionStateEl) {
-      connectionStateEl.textContent = "Connected and updating normally";
+      connectionStateEl.textContent = "QuickCanvas is active on your school account.";
     }
   } else {
     statusPill.textContent = "Offline";
@@ -1867,11 +1862,14 @@ function syncConnectionSummary(baseUrl = "") {
   if (!connectionNameEl) return;
   const normalized = normalizeBaseUrl(baseUrl || baseUrlInput?.value || "");
   if (!normalized) {
-    connectionNameEl.textContent = "Canvas connection";
+    connectionNameEl.textContent = "Canvas school";
+    if (connectionUrlEl) connectionUrlEl.textContent = "Not connected";
+    if (headerSchoolHostEl) headerSchoolHostEl.textContent = "Not connected";
     return;
   }
   try {
-    const host = new URL(normalized).hostname.replace(/\.instructure\.com$/i, "");
+    const hostname = new URL(normalized).hostname;
+    const host = hostname.replace(/\.instructure\.com$/i, "");
     const schoolName = host
       .split(/[.-]/)
       .filter(Boolean)
@@ -1880,31 +1878,13 @@ function syncConnectionSummary(baseUrl = "") {
     connectionNameEl.textContent = schoolName
       ? `${schoolName} Canvas`
       : "Canvas connection";
+    if (connectionUrlEl) connectionUrlEl.textContent = normalized;
+    if (headerSchoolHostEl) headerSchoolHostEl.textContent = hostname;
   } catch (error) {
     connectionNameEl.textContent = "Canvas connection";
+    if (connectionUrlEl) connectionUrlEl.textContent = normalized;
+    if (headerSchoolHostEl) headerSchoolHostEl.textContent = normalized;
   }
-}
-
-function syncGreeting() {
-  if (!timeGreetingEl) return;
-  const hour = new Date().getHours();
-  timeGreetingEl.textContent =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-}
-
-function syncQuickAccountSummary(session = null) {
-  if (!quickAccountNameEl || !quickAccountAvatarEl) return;
-  const effective = getEffectiveSession(session);
-  const fallbackEmail = String(effective?.user?.email || "").split("@")[0];
-  const name = String(currentProfileUsername || fallbackEmail || "QuickCanvas account");
-  quickAccountNameEl.textContent = name;
-  const initials = name
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-  quickAccountAvatarEl.textContent = initials || "QC";
 }
 
 function clamp(value, min, max) {
@@ -3576,7 +3556,6 @@ async function loadProfile() {
   }
 
   currentProfileUsername = username;
-  syncQuickAccountSummary(session);
   if (username) {
     displayNameInput.value = username;
   }
@@ -3873,7 +3852,6 @@ async function saveProfile() {
       );
     }
     currentProfileUsername = username;
-    syncQuickAccountSummary(session);
     authUsernameInput.value = username;
     if (profileSchoolStartInput) {
       profileSchoolStartInput.value =
@@ -5603,7 +5581,6 @@ function updateAuthUI(session) {
   if (adminTabBtn) {
     adminTabBtn.hidden = !signedIn || !isAdmin(session);
   }
-  syncQuickAccountSummary(session);
 }
 
 saveBtn.addEventListener(
@@ -5628,12 +5605,22 @@ if (openDashboardBtn) {
     withUiError("Open dashboard failed", openDashboard),
   );
 }
+changeConnectionBtn?.addEventListener("click", () => {
+  connectionPanel?.classList.toggle("is-expanded");
+  if (connectionPanel?.classList.contains("is-expanded")) {
+    baseUrlInput?.focus();
+  }
+});
+popupSettingsHelpBtn?.addEventListener(
+  "click",
+  withUiError("Open settings failed", openOptions),
+);
 if (togglePresetsBtn) {
   togglePresetsBtn.addEventListener("click", () => {
     const expanded = !presetGrid.classList.contains("is-expanded");
     presetGrid.classList.toggle("is-expanded", expanded);
     communityPanel?.classList.toggle("is-expanded", expanded);
-    togglePresetsBtn.textContent = expanded ? "Show fewer" : "Browse community";
+    togglePresetsBtn.textContent = expanded ? "Show less" : "View all";
     if (expanded) {
       loadCommunityThemes(
         sortLatestBtn.classList.contains("is-active") ? "latest" : "trending",
@@ -5642,33 +5629,6 @@ if (togglePresetsBtn) {
     }
   });
 }
-const revealPopupPanel = (panel, { openDetails = false } = {}) => {
-  if (!panel) return;
-  panel.classList.add("is-expanded");
-  if (openDetails) {
-    const details = panel.querySelector("details");
-    if (details) details.open = true;
-  }
-  panel.scrollIntoView({ behavior: "smooth", block: "start" });
-};
-appearanceQuickBtn?.addEventListener("click", () =>
-  revealPopupPanel(themeEditorPanel),
-);
-customThemeQuickBtn?.addEventListener("click", () =>
-  revealPopupPanel(themeEditorPanel, { openDetails: true }),
-);
-remindersQuickBtn?.addEventListener("click", () =>
-  revealPopupPanel(connectionPanel),
-);
-cloudThemesQuickBtn?.addEventListener("click", async () => {
-  setActiveTab("account");
-  if (accountCloudPanel && isUiSignedIn) {
-    accountCloudPanel.hidden = false;
-    await loadCloudThemes({ force: true });
-    accountCloudPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-});
-manageAccountQuickBtn?.addEventListener("click", () => setActiveTab("account"));
 enabledInput.addEventListener(
   "change",
   withUiError("Toggle dashboard failed", saveSettings),
@@ -5868,7 +5828,6 @@ if (supabaseClient) {
     setAuthMode("signin");
     setActiveTab(getStoredActiveTab() || "account");
     renderFontOptions();
-    syncGreeting();
     renderPresets();
     await Promise.all([
       loadForceSignedOutState(),
