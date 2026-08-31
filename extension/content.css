@@ -5115,6 +5115,60 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
     color: var(--cfe-danger) !important;
 }
 
+/* The approved dashboard is a true 12-column layout in normal view.
+   Point-based positioning is reserved for Edit Layout mode only. */
+#cfe-dashboard:not(.cfe-layout-edit-mode) {
+    width: calc(100vw - 136px) !important;
+    max-width: 1440px !important;
+    margin: 28px 28px 48px max(108px, calc(50vw - 680px)) !important;
+    zoom: 1 !important;
+}
+
+#cfe-dashboard:not(.cfe-layout-edit-mode) .cfe-widget-canvas {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    gap: 20px !important;
+    min-height: 0 !important;
+    height: auto !important;
+}
+
+#cfe-dashboard:not(.cfe-layout-edit-mode) .cfe-dashboard-widget {
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+#cfe-dashboard:not(.cfe-layout-edit-mode) [data-widget-id="assignments"] {
+    grid-column: span 7;
+    height: 300px !important;
+}
+
+#cfe-dashboard:not(.cfe-layout-edit-mode) [data-widget-id="progress"] {
+    grid-column: span 5;
+    height: 300px !important;
+}
+
+#cfe-dashboard:not(.cfe-layout-edit-mode) [data-widget-id="tasks"] {
+    grid-column: span 6;
+    height: 260px !important;
+}
+
+#cfe-dashboard:not(.cfe-layout-edit-mode) [data-widget-id="personal"],
+#cfe-dashboard:not(.cfe-layout-edit-mode) [data-widget-id="filterbar"] {
+    grid-column: span 3;
+    height: 260px !important;
+}
+
+#cfe-dashboard:not(.cfe-layout-edit-mode) [data-widget-id="quicklinks"],
+#cfe-dashboard:not(.cfe-layout-edit-mode) [data-widget-id="eventsmini"],
+#cfe-dashboard:not(.cfe-layout-edit-mode) [data-widget-id="announcementsmini"] {
+    grid-column: span 3;
+    height: 210px !important;
+}
+
 @media (max-width: 1180px) {
     #cfe-dashboard .cfe-actions {
         align-items: flex-start;
@@ -5128,6 +5182,21 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 }
 
 @media (max-width: 760px) {
+    #cfe-dashboard:not(.cfe-layout-edit-mode) {
+        width: calc(100vw - 24px) !important;
+        margin: 12px !important;
+    }
+
+    #cfe-dashboard:not(.cfe-layout-edit-mode) .cfe-widget-canvas {
+        grid-template-columns: 1fr !important;
+    }
+
+    #cfe-dashboard:not(.cfe-layout-edit-mode) .cfe-dashboard-widget {
+        grid-column: 1 !important;
+        height: auto !important;
+        min-height: 210px;
+    }
+
     #cfe-dashboard .cfe-header {
         display: block;
     }

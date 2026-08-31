@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>QuickCanvas theme fixture</title>
-    <link rel="stylesheet" href="/extension/content.css?v=0.7.1" />
+    <link rel="stylesheet" href="/extension/content.css?v=0.7.2" />
     <style>
       :root { --cfe-nav-bg:#152b3a; --cfe-nav-text:#fff; --cfe-nav-muted:#b8c7d0; --cfe-nav-hover-bg:#203d50; --cfe-nav-active-bg:#294b60; --cfe-nav-active-text:#fff; --cfe-nav-divider:#355064; }
       * { box-sizing: border-box; }
@@ -100,6 +100,9 @@
       <button data-show="dashboard">Dashboard</button><button data-show="modules">Modules</button><button data-show="assignments">Assignments</button><button data-show="grades">Grades</button><button data-show="discussions">Discussions</button><button data-show="calendar">Calendar</button><button data-show="settings">Settings</button><button data-show="quiz">Quiz</button>
     </div>
     <script>
+      ["assignments", "progress", "tasks", "personal", "filterbar", "quicklinks", "eventsmini", "announcementsmini"].forEach((id, index) => {
+        document.querySelectorAll("#cfe-dashboard .cfe-dashboard-widget")[index]?.setAttribute("data-widget-id", id);
+      });
       const typeClasses = ["cfe-page-dashboard", "cfe-page-modules", "cfe-page-assignments", "cfe-page-grades", "cfe-page-discussions", "cfe-page-calendar", "cfe-page-settings", "cfe-quiz-page", "cfe-dashboard-only"];
       const sizeDashboard = () => {
         const dashboard = document.getElementById("cfe-dashboard");

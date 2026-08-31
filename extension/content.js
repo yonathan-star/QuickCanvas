@@ -3114,7 +3114,6 @@
         announcementsmini: { width: 265, height: 210 },
       },
     };
-    const DASHBOARD_LOGICAL_WIDTH = 1120;
     const DASHBOARD_LAYOUT_VERSION = 10;
     const dashboardWidgetCatalog = [
       { id: "assignments", label: "Assignments" },
@@ -3186,40 +3185,8 @@
 
     function updateDashboardRenderScale() {
       if (!container || !widgetCanvasEl) return;
-      const viewportWidth = Math.max(
-        320,
-        document.documentElement.clientWidth || window.innerWidth || 1280,
-      );
-      const isCompact = viewportWidth <= 760;
-      const canvasNavWidth = isCompact ? 0 : 80;
-      const canvasAreaWidth = Math.max(320, viewportWidth - canvasNavWidth);
-      const availableWidth = isCompact
-        ? Math.max(300, viewportWidth - 24)
-        : Math.min(1440, Math.max(560, canvasAreaWidth - 56));
-      const physicalLeft = isCompact
-        ? 12
-        : canvasNavWidth + Math.max(28, (canvasAreaWidth - availableWidth) / 2);
-      dashboardRenderScale = clamp(
-        availableWidth / DASHBOARD_LOGICAL_WIDTH,
-        0.5,
-        1440 / DASHBOARD_LOGICAL_WIDTH,
-      );
-      container.style.setProperty(
-        "--cfe-dashboard-scale",
-        String(dashboardRenderScale),
-      );
-      container.style.setProperty(
-        "--cfe-dashboard-margin-left",
-        `${physicalLeft / dashboardRenderScale}px`,
-      );
-      container.style.setProperty(
-        "--cfe-dashboard-margin-top",
-        `${(isCompact ? 12 : 28) / dashboardRenderScale}px`,
-      );
-      container.style.setProperty(
-        "--cfe-dashboard-margin-bottom",
-        `${48 / dashboardRenderScale}px`,
-      );
+      dashboardRenderScale = 1;
+      container.style.setProperty("--cfe-dashboard-scale", "1");
     }
 
     function scheduleDashboardRenderScale() {
@@ -3851,6 +3818,11 @@
 
     function refreshFreeCanvasHeight() {
       if (!widgetCanvasEl) return;
+      if (!layoutEditMode) {
+        widgetCanvasEl.style.minHeight = "";
+        scheduleDashboardRenderScale();
+        return;
+      }
       let maxBottom = 0;
       widgetCanvasEl
         .querySelectorAll(".cfe-dashboard-widget[data-widget-id]:not([hidden])")
