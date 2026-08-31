@@ -1,7 +1,7 @@
 ﻿{
   "manifest_version": 3,
   "name": "QuickCanvas",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "A faster, unified Canvas workspace with a customizable dashboard, assignments, grades, due dates, and calendar.",
   "permissions": [
     "storage",
@@ -12,6 +12,12 @@
   ],
   "host_permissions": ["https://www.googleapis.com/*"],
   "optional_host_permissions": ["https://*/*"],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*.png"],
+      "matches": ["https://*/*"]
+    }
+  ],
   "oauth2": {
     "client_id": "436815959887-i05glpk3345qc5soph3g1a30g4tt3hda.apps.googleusercontent.com",
     "scopes": ["https://www.googleapis.com/auth/calendar.events"]

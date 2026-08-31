@@ -5250,6 +5250,277 @@ body.cfe-theme-applied #global_nav .ic-app-header__logo img {
     object-fit: contain !important;
 }
 
+/* Approved QuickCanvas rail. Keep Canvas's native anchors and destinations;
+   only replace their desktop presentation so navigation remains functional. */
+@media (min-width: 768px) {
+    body.cfe-theme-applied .ic-app-header {
+        position: fixed !important;
+        inset: 0 auto 0 0 !important;
+        z-index: 1000 !important;
+        display: flex !important;
+        width: 80px !important;
+        min-width: 80px !important;
+        height: 100vh !important;
+        padding: 0 !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        overflow: hidden !important;
+        background: var(--cfe-nav-bg, #152b3a) !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__main-navigation {
+        display: flex !important;
+        width: 80px !important;
+        min-height: 0 !important;
+        flex: 1 1 auto !important;
+        flex-direction: column !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        scrollbar-width: none;
+    }
+
+    body.cfe-theme-applied .ic-app-header__main-navigation::-webkit-scrollbar {
+        display: none;
+    }
+
+    body.cfe-theme-applied .ic-app-header__logomark-container,
+    body.cfe-theme-applied .ic-app-header__logo-container {
+        display: grid !important;
+        width: 80px !important;
+        height: 76px !important;
+        min-height: 76px !important;
+        flex: 0 0 76px !important;
+        place-items: center !important;
+        padding: 0 !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__logomark,
+    body.cfe-theme-applied .ic-app-header__logo-link {
+        display: block !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 10px !important;
+        background: #ffffff url("icons/icon48.png") center / 40px 40px no-repeat !important;
+        box-shadow: 0 7px 18px rgba(4, 13, 20, 0.22) !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__logomark img,
+    body.cfe-theme-applied .ic-app-header__logo-link img,
+    body.cfe-theme-applied .ic-app-header__logo img {
+        display: none !important;
+    }
+
+    body.cfe-theme-applied #global_nav,
+    body.cfe-theme-applied #global_nav #menu,
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list {
+        display: flex !important;
+        width: 80px !important;
+        min-width: 80px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        flex: 1 0 auto !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        list-style: none !important;
+    }
+
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item,
+    body.cfe-theme-applied #global_nav .menu-item {
+        display: block !important;
+        width: 80px !important;
+        min-width: 80px !important;
+        min-height: 56px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        flex: 0 0 56px !important;
+    }
+
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-link,
+    body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"],
+    body.cfe-theme-applied #global_nav #primaryNavToggle {
+        position: relative !important;
+        z-index: 1 !important;
+        display: flex !important;
+        width: 80px !important;
+        height: 56px !important;
+        min-height: 56px !important;
+        margin: 0 !important;
+        padding: 6px 3px !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 3px !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        color: var(--cfe-nav-muted, #b8c7d0) !important;
+        font-family: var(--cfe-font-body) !important;
+        text-align: center !important;
+        text-decoration: none !important;
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
+
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-link > *,
+    body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"] > * {
+        pointer-events: none !important;
+    }
+
+    body.cfe-theme-applied #global_nav .menu-item-icon-container,
+    body.cfe-theme-applied #global_nav .menu-item__icon,
+    body.cfe-theme-applied #global_nav .ic-icon-svg,
+    body.cfe-theme-applied #global_nav svg {
+        position: static !important;
+        display: block !important;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        margin: 0 !important;
+        transform: none !important;
+        color: currentColor !important;
+    }
+
+    body.cfe-theme-applied #global_nav .menu-item__text,
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item__text {
+        position: static !important;
+        display: block !important;
+        max-width: 74px !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        transform: none !important;
+        color: currentColor !important;
+        font-size: 9px !important;
+        font-weight: 500 !important;
+        line-height: 1.1 !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-link:hover,
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-link:focus-visible,
+    body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"]:hover,
+    body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"]:focus-visible {
+        background: var(--cfe-nav-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+        color: var(--cfe-nav-text, #ffffff) !important;
+    }
+
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item--active,
+    body.cfe-theme-applied #global_nav .menu-item--active,
+    body.cfe-theme-applied #global_nav [aria-current="page"] {
+        background: var(--cfe-nav-active-bg, rgba(255, 255, 255, 0.1)) !important;
+        box-shadow: inset 4px 0 0 var(--cfe-nav-text, #ffffff) !important;
+    }
+
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item--active .ic-app-header__menu-list-link,
+    body.cfe-theme-applied #global_nav .menu-item--active .ic-app-header__menu-list-link,
+    body.cfe-theme-applied #global_nav [aria-current="page"] {
+        color: var(--cfe-nav-active-text, #ffffff) !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__secondary-navigation {
+        display: flex !important;
+        width: 80px !important;
+        margin: auto 0 0 !important;
+        padding: 0 !important;
+        flex: 0 0 auto !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        background: var(--cfe-nav-bg, #152b3a) !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__secondary-navigation .ic-app-header__menu-list-link,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation [id^="global_nav_"][id$="_link"] {
+        position: relative !important;
+        display: flex !important;
+        width: 80px !important;
+        height: 56px !important;
+        min-height: 56px !important;
+        margin: 0 !important;
+        padding: 6px 3px !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 3px !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        color: var(--cfe-nav-muted, #b8c7d0) !important;
+        font-family: var(--cfe-font-body) !important;
+        text-align: center !important;
+        text-decoration: none !important;
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__secondary-navigation .menu-item-icon-container,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation .menu-item__icon,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation .ic-icon-svg,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation svg {
+        position: static !important;
+        display: block !important;
+        width: 20px !important;
+        height: 20px !important;
+        margin: 0 !important;
+        transform: none !important;
+        color: currentColor !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__secondary-navigation .menu-item__text,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation .ic-app-header__menu-list-item__text {
+        position: static !important;
+        display: block !important;
+        max-width: 74px !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        transform: none !important;
+        color: currentColor !important;
+        font-size: 9px !important;
+        font-weight: 500 !important;
+        line-height: 1.1 !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__secondary-navigation .ic-app-header__menu-list-link:hover,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation .ic-app-header__menu-list-link:focus-visible {
+        background: var(--cfe-nav-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+        color: var(--cfe-nav-text, #ffffff) !important;
+    }
+}
+
+@media (min-width: 768px) and (max-height: 720px) {
+    body.cfe-theme-applied .ic-app-header__logomark-container,
+    body.cfe-theme-applied .ic-app-header__logo-container {
+        height: 60px !important;
+        min-height: 60px !important;
+        flex-basis: 60px !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__logomark,
+    body.cfe-theme-applied .ic-app-header__logo-link {
+        width: 38px !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        background-size: 34px 34px !important;
+    }
+
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-item,
+    body.cfe-theme-applied #global_nav .menu-item,
+    body.cfe-theme-applied #global_nav .ic-app-header__menu-list-link,
+    body.cfe-theme-applied #global_nav [id^="global_nav_"][id$="_link"],
+    body.cfe-theme-applied #global_nav #primaryNavToggle,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation .ic-app-header__menu-list-link,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation [id^="global_nav_"][id$="_link"] {
+        height: 50px !important;
+        min-height: 50px !important;
+        flex-basis: 50px !important;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     body.cfe-theme-applied *,
     body.cfe-theme-applied *::before,
