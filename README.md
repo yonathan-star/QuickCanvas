@@ -9,10 +9,11 @@ Canvas OAuth is still the supported option for a standalone or multi-school
 service. It requires an administrator-enabled Developer Key and a trusted
 backend for the client secret; never embed that secret in this extension.
 
-Version 0.7.8 implements the approved Calm Workspace popup at its native
-measurements and migrates the dashboard to the approved clean 12-column layout.
-Normal viewing keeps stable card sizes and concise previews; Edit Layout still
-supports dragging, resizing, removing, and restoring widgets.
+Version 0.8.0 extends the approved QuickCanvas workspace across course pages.
+Native Canvas routes now share the same clean hierarchy, responsive course
+navigation, and card system, while Panopto and other LTI tools keep their real
+content inside a resilient, full-width QuickCanvas shell. The dashboard and
+popup retain their approved layouts and all existing interactions.
 
 - `extension/` contains the browser extension source.
 - `ad-kit/` contains the TikTok ad project and recording scripts.

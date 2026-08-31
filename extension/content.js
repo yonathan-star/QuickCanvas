@@ -117,23 +117,90 @@
   function isQuizLikePath(pathname) {
     const path = String(pathname || "").toLowerCase();
     return (
-      /\/courses\/\d+\/quizzes(\/|$)/.test(path) ||
-      /\/courses\/\d+\/assignment_quizzes(\/|$)/.test(path) ||
+      /\/courses\/[^/]+\/quizzes\/[^/]+(\/|$)/.test(path) ||
+      /\/courses\/[^/]+\/assignment_quizzes(\/|$)/.test(path) ||
       /\/assessment_questions(\/|$)/.test(path) ||
       /\/quiz_submission(\/|$)/.test(path) ||
       /\/quiz_submissions(\/|$)/.test(path)
     );
   }
 
+  function getCourseRouteContext(pathname) {
+    const path = String(pathname || "/").toLowerCase();
+    const courseMatch = path.match(/^\/courses\/([^/]+)(?:\/(.*))?$/);
+    const courseTail = String(courseMatch?.[2] || "").replace(/\/+$/, "");
+    const semanticText = [
+      document.title,
+      document.querySelector("#section-tabs .section.active")?.textContent,
+      document.querySelector('#section-tabs [aria-current="page"]')
+        ?.textContent,
+      document.querySelector(".ic-app-crumbs__crumb--current")?.textContent,
+      document.querySelector("#content h1")?.textContent,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    const isExternalTool = Boolean(
+      courseMatch &&
+        /^(external_tools|external_content|lti)(\/|$)/.test(courseTail),
+    );
+    const isMediaTool =
+      isExternalTool &&
+      /(panopto|studio|recordings?|media gallery|mediasite|kaltura|video library)/.test(
+        semanticText,
+      );
+    const isCollaborationTool =
+      isExternalTool &&
+      /(collaborations?|conferences?|google drive|microsoft teams|zoom)/.test(
+        semanticText,
+      );
+
+    return {
+      isCourse: Boolean(courseMatch),
+      isCourseHome: Boolean(courseMatch && !courseTail),
+      isAnnouncements: /^(announcements)(\/|$)/.test(courseTail),
+      isAssignments: /^(assignments)(\/|$)/.test(courseTail),
+      isDiscussions: /^(discussion_topics|discussions)(\/|$)/.test(courseTail),
+      isFiles: /^(files)(\/|$)/.test(courseTail),
+      isGrades: /^(grades|gradebook)(\/|$)/.test(courseTail),
+      isModules: /^(modules)(\/|$)/.test(courseTail),
+      isPages: /^(pages|wiki)(\/|$)/.test(courseTail),
+      isPeople: /^(users|people|groups)(\/|$)/.test(courseTail),
+      isQuizzes: /^(quizzes|assignment_quizzes)(\/|$)/.test(courseTail),
+      isSyllabus: /^(syllabus|assignments\/syllabus)(\/|$)/.test(courseTail),
+      isExternalTool,
+      isMediaTool,
+      isCollaborationTool,
+    };
+  }
+
   function syncPageTypeClasses(pathname = window.location.pathname || "/") {
     const path = String(pathname || "/").toLowerCase();
+    const course = getCourseRouteContext(path);
     const pageTypes = {
       "cfe-page-dashboard": isDashboardPath(path),
-      "cfe-page-course": /\/courses\/\d+(\/|$)/.test(path),
-      "cfe-page-modules": /\/courses\/\d+\/modules(\/|$)/.test(path),
-      "cfe-page-assignments": /\/courses\/\d+\/assignments(\/|$)/.test(path),
-      "cfe-page-grades": /\/(grades|gradebook)(\/|$)/.test(path),
-      "cfe-page-discussions": /\/(discussion_topics|discussions)(\/|$)/.test(path),
+      "cfe-page-course": course.isCourse,
+      "cfe-page-course-home": course.isCourseHome,
+      "cfe-page-modules": course.isModules,
+      "cfe-page-assignments": course.isAssignments,
+      "cfe-page-grades":
+        course.isGrades || /\/(grades|gradebook)(\/|$)/.test(path),
+      "cfe-page-discussions":
+        course.isDiscussions ||
+        /\/(discussion_topics|discussions)(\/|$)/.test(path),
+      "cfe-page-announcements": course.isAnnouncements,
+      "cfe-page-pages": course.isPages,
+      "cfe-page-files": course.isFiles,
+      "cfe-page-people": course.isPeople,
+      "cfe-page-syllabus": course.isSyllabus,
+      "cfe-page-assessments": course.isQuizzes,
+      "cfe-page-external-tool": course.isExternalTool,
+      "cfe-page-media-tool": course.isMediaTool,
+      "cfe-page-collaboration-tool": course.isCollaborationTool,
+      "cfe-page-custom-tool":
+        course.isExternalTool &&
+        !course.isMediaTool &&
+        !course.isCollaborationTool,
       "cfe-page-calendar": path === "/calendar" || path.startsWith("/calendar/"),
       "cfe-page-settings": /\/(settings|profile|accounts)(\/|$)/.test(path),
       "cfe-quiz-page": isQuizLikePath(path),
@@ -144,15 +211,23 @@
         target.classList.toggle(className, enabled);
       });
     };
+    const pageKind = Object.entries(pageTypes)
+      .filter(([, enabled]) => enabled)
+      .map(([className]) => className.replace(/^cfe-page-/, ""))
+      .join(" ");
     applyClasses(document.documentElement);
     if (document.body) {
       applyClasses(document.body);
+      document.body.dataset.cfePageKind = pageKind;
       return;
     }
     document.addEventListener(
       "DOMContentLoaded",
       () => {
         applyClasses(document.body);
+        if (document.body) {
+          document.body.dataset.cfePageKind = pageKind;
+        }
       },
       { once: true },
     );

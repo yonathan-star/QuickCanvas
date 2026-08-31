@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>QuickCanvas theme fixture</title>
-    <link rel="stylesheet" href="/extension/content.css?v=0.7.8" />
+    <link rel="stylesheet" href="/extension/content.css?v=0.8.0" />
     <style>
       :root { --cfe-nav-bg:#152b3a; --cfe-nav-text:#fff; --cfe-nav-muted:#b8c7d0; --cfe-nav-hover-bg:#203d50; --cfe-nav-active-bg:#294b60; --cfe-nav-active-text:#fff; --cfe-nav-divider:#355064; --cfe-brand-icon:url("/extension/icons/icon48.png"); }
       * { box-sizing: border-box; }
@@ -43,7 +43,7 @@
       <div class="ic-app-nav-toggle-and-crumbs">
         <div class="ic-app-crumbs"><ol class="ic-app-crumbs__crumbs"><li><a href="#">Ecology &amp; Evolution</a></li><li aria-current="page"><a href="#">Modules</a></li></ol></div>
       </div>
-      <div class="fixture-columns">
+      <div class="fixture-columns ic-Layout-columns">
         <aside id="left-side">
           <ul id="section-tabs">
             <li class="section"><a href="#">Home</a></li>
@@ -70,6 +70,24 @@
           </section>
           <section class="fixture-page" data-fixture-page="discussions" hidden>
             <h1>Discussions</h1><article class="discussion_entry"><h2>Can one species reshape an ecosystem?</h2><p>Sea otters offer a clear example: their predation limits urchins and protects kelp forests.</p><span class="unread">6 unread replies</span></article>
+          </section>
+          <section class="fixture-page" data-fixture-page="announcements" hidden>
+            <div class="ic-Action-header"><h1>Announcements</h1><button class="Button Button--primary">+ Announcement</button></div><div id="announcements"><article class="announcement"><h2>Field lab moved to Riverside Preserve</h2><p>Meet at the science wing entrance at 8:15 AM. Bring closed-toe shoes and your field notebook.</p></article><article class="announcement"><h2>Week 5 resources are ready</h2><p>The review guide and lecture recording are now available.</p></article></div>
+          </section>
+          <section class="fixture-page" data-fixture-page="pages" hidden>
+            <div class="ic-Action-header"><h1>Pages &amp; Files</h1><button class="Button Button--primary">+ Page</button></div><div id="wiki_page_index" class="index-content"><div class="ic-item-row"><strong>Field Methods &amp; Safety</strong><span>Edited yesterday</span></div><div class="ic-item-row"><strong>Population Ecology Guide</strong><span>Edited Sep 19</span></div><div class="ic-item-row"><strong>Course files</strong><span>12 files</span></div></div>
+          </section>
+          <section class="fixture-page" data-fixture-page="people" hidden>
+            <div class="ic-Action-header"><h1>People</h1><button class="Button Button--primary">+ People</button></div><div id="people" class="roster"><div class="ic-item-row"><strong>Dr. Maya Chen</strong><span>Teacher</span></div><div class="ic-item-row"><strong>Jordan Lee</strong><span>Student</span></div><div class="ic-item-row"><strong>Sam Rivera</strong><span>Student</span></div></div>
+          </section>
+          <section class="fixture-page" data-fixture-page="syllabus" hidden>
+            <div class="ic-Action-header"><h1>Course Syllabus</h1></div><article id="course_syllabus"><h2>Ecology &amp; Evolution</h2><p>Explore how organisms interact with one another and their environment through fieldwork, discussion, and data analysis.</p><h3>Materials and participation</h3><p>Bring a field notebook and participate in weekly lab activities.</p><h3>Course policies</h3><p>Submit work through Canvas and contact the instructor early when you need support.</p></article>
+          </section>
+          <section class="fixture-page" data-fixture-page="assessments" hidden>
+            <div class="ic-Action-header"><h1>Quizzes &amp; Assessments</h1><button class="Button Button--primary">+ Quiz</button></div><div id="quiz_index" class="quiz-list"><div class="ig-row"><strong>Week 5 Knowledge Check</strong><span>Due Friday · 10 points</span></div><div class="ig-row"><strong>Population Ecology Review</strong><span>Available Sep 28</span></div></div>
+          </section>
+          <section class="fixture-page" data-fixture-page="external-tool" hidden>
+            <div class="ic-Action-header"><div><p>Course tool</p><h1>Media and Recordings</h1></div><button class="Button">Open in new tab</button></div><div id="tool_content"><iframe id="external_tool_iframe" title="Panopto fixture" srcdoc="<!doctype html><style>body{font:16px system-ui;margin:0;padding:28px;color:#24313a;background:#fff}.video{padding:32px;border:1px solid #dfe5e8;border-radius:12px;background:#f7fafb}h2{margin-top:0}</style><div class='video'><h2>Population Ecology: Carrying Capacity</h2><p>Lecture recording · 42 minutes</p><button>Watch recording</button></div>"></iframe></div>
           </section>
           <section class="fixture-page" data-fixture-page="calendar" hidden>
             <h1>Calendar</h1><div id="calendar-app"><div class="fc-view"><table class="fc-scrollgrid"><thead><tr><th class="fc-col-header-cell">Sun</th><th class="fc-col-header-cell">Mon</th><th class="fc-col-header-cell">Tue</th></tr></thead><tbody><tr><td class="fc-day">21</td><td class="fc-day fc-day-today">22</td><td class="fc-day">23</td></tr></tbody></table></div></div>
@@ -103,13 +121,13 @@
       </div>
     </section>
     <div class="fixture-toolbar">
-      <button data-show="dashboard">Dashboard</button><button data-show="modules">Modules</button><button data-show="assignments">Assignments</button><button data-show="grades">Grades</button><button data-show="discussions">Discussions</button><button data-show="calendar">Calendar</button><button data-show="settings">Settings</button><button data-show="quiz">Quiz</button>
+      <button data-show="dashboard">Dashboard</button><button data-show="modules">Modules</button><button data-show="assignments">Assignments</button><button data-show="grades">Grades</button><button data-show="discussions">Discussions</button><button data-show="announcements">Announcements</button><button data-show="pages">Pages</button><button data-show="people">People</button><button data-show="syllabus">Syllabus</button><button data-show="assessments">Quizzes</button><button data-show="external-tool">Panopto</button><button data-show="calendar">Calendar</button><button data-show="settings">Settings</button><button data-show="quiz">Quiz</button>
     </div>
     <script>
       ["assignments", "progress", "tasks", "personal", "filterbar", "quicklinks", "eventsmini", "announcementsmini"].forEach((id, index) => {
         document.querySelectorAll("#cfe-dashboard .cfe-dashboard-widget")[index]?.setAttribute("data-widget-id", id);
       });
-      const typeClasses = ["cfe-page-dashboard", "cfe-page-modules", "cfe-page-assignments", "cfe-page-grades", "cfe-page-discussions", "cfe-page-calendar", "cfe-page-settings", "cfe-quiz-page", "cfe-dashboard-only"];
+      const typeClasses = ["cfe-page-dashboard", "cfe-page-course", "cfe-page-modules", "cfe-page-assignments", "cfe-page-grades", "cfe-page-discussions", "cfe-page-announcements", "cfe-page-pages", "cfe-page-people", "cfe-page-syllabus", "cfe-page-assessments", "cfe-page-external-tool", "cfe-page-media-tool", "cfe-page-calendar", "cfe-page-settings", "cfe-quiz-page", "cfe-dashboard-only"];
       const sizeDashboard = () => {
         const dashboard = document.getElementById("cfe-dashboard");
         const viewportWidth = document.documentElement.clientWidth;
@@ -128,7 +146,7 @@
         const page = button.dataset.show;
         document.querySelectorAll(".fixture-page").forEach((section) => { section.hidden = section.dataset.fixturePage !== page; });
         document.querySelector(".fixture-shell").hidden = page === "dashboard";
-        [document.documentElement, document.body].forEach((node) => { typeClasses.forEach((name) => node.classList.remove(name)); node.classList.add(page === "quiz" ? "cfe-quiz-page" : `cfe-page-${page}`); if (page === "dashboard") node.classList.add("cfe-dashboard-only"); });
+        [document.documentElement, document.body].forEach((node) => { typeClasses.forEach((name) => node.classList.remove(name)); node.classList.add(page === "quiz" ? "cfe-quiz-page" : `cfe-page-${page}`); if (!['dashboard', 'calendar', 'settings'].includes(page)) node.classList.add("cfe-page-course"); if (page === "external-tool") node.classList.add("cfe-page-media-tool"); if (page === "dashboard") node.classList.add("cfe-dashboard-only"); });
         if (page === "dashboard") sizeDashboard();
       }));
       window.addEventListener("resize", sizeDashboard);
