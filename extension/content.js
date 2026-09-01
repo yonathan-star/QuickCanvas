@@ -22,6 +22,8 @@
   let routeWatcherBound = false;
   let routeRefreshTimer = null;
   let globalNavObserver = null;
+  let globalNavPaintFrame = null;
+  let courseAdapterRetryTimers = [];
   let nonDashboardThemeQueued = false;
   let passiveRouteSyncBound = false;
   let routeWatcherIntervalId = null;
@@ -506,6 +508,28 @@
     }
     ensureCoursePageHeader(courseName);
     ensureExternalToolToolbar();
+  }
+
+  function clearCourseAdapterRetries() {
+    courseAdapterRetryTimers.forEach((timerId) => clearTimeout(timerId));
+    courseAdapterRetryTimers = [];
+  }
+
+  function scheduleCourseDesignAdapter() {
+    clearCourseAdapterRetries();
+    ensureCourseDesignAdapter();
+    if (!document.body?.classList.contains("cfe-page-course")) return;
+    // Canvas mounts parts of course pages asynchronously. Retry only for a
+    // short, bounded window instead of mutating the page forever.
+    courseAdapterRetryTimers = [120, 420, 1000, 2200].map((delay) =>
+      setTimeout(() => {
+        if (isStaleInstance()) return;
+        if (!document.documentElement.classList.contains("cfe-theme-applied")) {
+          return;
+        }
+        ensureCourseDesignAdapter();
+      }, delay),
+    );
   }
 
   function isExtensionContextValid() {
@@ -1219,8 +1243,12 @@
   function bindGlobalNavColorObserver() {
     if (globalNavObserver) return;
     globalNavObserver = new MutationObserver(() => {
-      paintGlobalNavColors();
-      paintBreadcrumbPathColors();
+      if (isStaleInstance() || globalNavPaintFrame) return;
+      globalNavPaintFrame = requestAnimationFrame(() => {
+        globalNavPaintFrame = null;
+        paintGlobalNavColors();
+        paintBreadcrumbPathColors();
+      });
     });
     globalNavObserver.observe(document.documentElement, {
       childList: true,
@@ -1262,6 +1290,7 @@
   }
 
   function resetTheme() {
+    clearCourseAdapterRetries();
     document.documentElement.classList.remove("cfe-theme-applied");
     if (document.body) {
       document.body.classList.remove("cfe-theme-applied", "cfe-theme-dark");
@@ -1605,6 +1634,7 @@
     if (styleTag) {
       styleTag.remove();
     }
+    scheduleCourseDesignAdapter();
   }
 
   async function loadPopupTheme() {
@@ -1709,19 +1739,11 @@
     if (passiveRouteSyncBound) return;
     passiveRouteSyncBound = true;
     let lastPath = window.location.pathname || "/";
-    let lastThemeSyncAt = 0;
 
     const sync = () => {
       if (isStaleInstance()) return;
       const path = window.location.pathname || "/";
       syncPageTypeClasses(path);
-      if (document.documentElement.classList.contains("cfe-theme-applied")) {
-        ensureCourseDesignAdapter();
-      }
-      const now = Date.now();
-      const shouldRefreshTheme =
-        document.visibilityState === "visible" &&
-        now - lastThemeSyncAt > 15_000;
       if (document.getElementById("cfe-auth-wall")) {
         ensureAuthWall();
       }
@@ -1733,7 +1755,6 @@
       if (!isDashboardPath(path)) {
         if (changed) {
           cleanupNonDashboardUi();
-          lastThemeSyncAt = now;
           applyThemeForCurrentOrigin().catch(() => {
             // ignore transient reload invalidation
           });
@@ -1744,12 +1765,6 @@
           return;
         }
         if (!document.documentElement.classList.contains("cfe-theme-applied")) {
-          lastThemeSyncAt = now;
-          applyThemeForCurrentOrigin().catch(() => {
-            // ignore transient reload invalidation
-          });
-        } else if (shouldRefreshTheme) {
-          lastThemeSyncAt = now;
           applyThemeForCurrentOrigin().catch(() => {
             // ignore transient reload invalidation
           });
@@ -1765,13 +1780,6 @@
         return;
       }
 
-      if (shouldRefreshTheme) {
-        lastThemeSyncAt = now;
-        applyThemeForCurrentOrigin().catch(() => {
-          // ignore transient reload invalidation
-        });
-      }
-
       if (changed && !document.getElementById("cfe-dashboard")) {
         window.__cfeInjected = false;
         init();
@@ -1780,11 +1788,16 @@
 
     window.addEventListener("popstate", () => setTimeout(sync, 60));
     window.addEventListener("hashchange", () => setTimeout(sync, 60));
-    passiveRouteSyncIntervalId = window.setInterval(sync, 700);
+    passiveRouteSyncIntervalId = window.setInterval(sync, 1000);
   }
 
   function destroy() {
     teardownDashboardRuntimeBindings();
+    clearCourseAdapterRetries();
+    if (globalNavPaintFrame) {
+      cancelAnimationFrame(globalNavPaintFrame);
+      globalNavPaintFrame = null;
+    }
     if (routeWatcherIntervalId) {
       clearInterval(routeWatcherIntervalId);
       routeWatcherIntervalId = null;

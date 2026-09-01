@@ -9,13 +9,14 @@ Canvas OAuth is still the supported option for a standalone or multi-school
 service. It requires an administrator-enabled Developer Key and a trusted
 backend for the client secret; never embed that secret in this extension.
 
-Version 0.8.2 implements the approved Superdesign course workspace as a
+Version 0.8.3 implements the approved Superdesign course workspace as a
 structural Canvas adapter rather than a generic skin. Native routes now use the
 same 80px global rail, 208px course rail, 48px breadcrumb bar, content bounds,
 page hierarchy, and compact card system as the reference. Panopto and other LTI
 tools retain their real content inside the matching full-width tool shell. The
-dashboard, popup, and existing Canvas interactions remain intact. The 0.8.2
-runtime also prevents observer feedback and duplicate LTI toolbars.
+dashboard, popup, and existing Canvas interactions remain intact. The 0.8.3
+runtime uses bounded course-page mounting, prevents observer feedback and
+duplicate LTI toolbars, and performs no recurring theme reapplication.
 
 - `extension/` contains the browser extension source.
 - `ad-kit/` contains the TikTok ad project and recording scripts.
