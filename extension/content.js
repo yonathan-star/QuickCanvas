@@ -160,22 +160,50 @@
       /(collaborations?|conferences?|google drive|microsoft teams|zoom)/.test(
         semanticText,
       );
+    const isCourseRoot = Boolean(courseMatch && !courseTail);
+    // Canvas can render a configured course home (most notably Syllabus) at
+    // /courses/:id instead of the section's canonical URL. Use the active
+    // Canvas navigation/breadcrumb semantics so the correct page adapter wins.
+    const rootSection = isCourseRoot
+      ? {
+          announcements: /\bannouncements?\b/.test(semanticText),
+          assignments: /\bassignments?\b/.test(semanticText),
+          discussions: /\bdiscussions?\b/.test(semanticText),
+          grades: /\bgrades?\b/.test(semanticText),
+          modules: /\bmodules?\b/.test(semanticText),
+          pages: /\bpages?\b/.test(semanticText),
+          people: /\bpeople\b|\broster\b/.test(semanticText),
+          quizzes: /\bquizzes?\b|\bassessments?\b/.test(semanticText),
+          syllabus: /\bsyllabus\b/.test(semanticText),
+        }
+      : {};
+    const hasSemanticRootSection = Object.values(rootSection).some(Boolean);
 
     return {
       isCourse: Boolean(courseMatch),
-      isCourseHome: Boolean(courseMatch && !courseTail),
+      isCourseHome: Boolean(isCourseRoot && !hasSemanticRootSection),
       isAssignmentDetail,
       isDiscussionDetail,
-      isAnnouncements: /^(announcements)(\/|$)/.test(courseTail),
-      isAssignments: /^(assignments)(\/|$)/.test(courseTail),
-      isDiscussions: /^(discussion_topics|discussions)(\/|$)/.test(courseTail),
+      isAnnouncements:
+        /^(announcements)(\/|$)/.test(courseTail) || rootSection.announcements,
+      isAssignments:
+        /^(assignments)(\/|$)/.test(courseTail) || rootSection.assignments,
+      isDiscussions:
+        /^(discussion_topics|discussions)(\/|$)/.test(courseTail) ||
+        rootSection.discussions,
       isFiles: /^(files)(\/|$)/.test(courseTail),
-      isGrades: /^(grades|gradebook)(\/|$)/.test(courseTail),
-      isModules: /^(modules)(\/|$)/.test(courseTail),
-      isPages: /^(pages|wiki)(\/|$)/.test(courseTail),
-      isPeople: /^(users|people|groups)(\/|$)/.test(courseTail),
-      isQuizzes: /^(quizzes|assignment_quizzes)(\/|$)/.test(courseTail),
-      isSyllabus: /^(syllabus|assignments\/syllabus)(\/|$)/.test(courseTail),
+      isGrades:
+        /^(grades|gradebook)(\/|$)/.test(courseTail) || rootSection.grades,
+      isModules: /^(modules)(\/|$)/.test(courseTail) || rootSection.modules,
+      isPages: /^(pages|wiki)(\/|$)/.test(courseTail) || rootSection.pages,
+      isPeople:
+        /^(users|people|groups)(\/|$)/.test(courseTail) || rootSection.people,
+      isQuizzes:
+        /^(quizzes|assignment_quizzes)(\/|$)/.test(courseTail) ||
+        rootSection.quizzes,
+      isSyllabus:
+        /^(syllabus|assignments\/syllabus)(\/|$)/.test(courseTail) ||
+        rootSection.syllabus,
       isExternalTool,
       isMediaTool,
       isCollaborationTool,
@@ -282,6 +310,7 @@
     },
     "cfe-page-syllabus": {
       eyebrow: "Course information",
+      title: "Course Syllabus",
       description: "Policies, schedule, grading details, and course expectations.",
     },
     "cfe-page-assessments": {
@@ -363,6 +392,19 @@
     if (!header || !title) return;
     header.classList.add("cfe-course-page-header");
     title.classList.add("cfe-course-page-title");
+    if (presentation.title) {
+      if (!title.dataset.cfeOriginalTitle) {
+        title.dataset.cfeOriginalTitle = title.textContent || "";
+      }
+      if (title.textContent !== presentation.title) {
+        title.textContent = presentation.title;
+      }
+    } else if (title.dataset.cfeOriginalTitle !== undefined) {
+      if (title.textContent === COURSE_PAGE_PRESENTATION["cfe-page-syllabus"].title) {
+        title.textContent = title.dataset.cfeOriginalTitle;
+      }
+      delete title.dataset.cfeOriginalTitle;
+    }
     let copy =
       title.closest(".ic-Action-header__Primary") || title.parentElement || header;
     if (copy === header) {
@@ -477,6 +519,15 @@
       node.classList.remove("cfe-course-page-header");
     });
     document.querySelectorAll(".cfe-course-page-title").forEach((node) => {
+      if (node.dataset.cfeOriginalTitle !== undefined) {
+        if (
+          node.textContent ===
+          COURSE_PAGE_PRESENTATION["cfe-page-syllabus"].title
+        ) {
+          node.textContent = node.dataset.cfeOriginalTitle;
+        }
+        delete node.dataset.cfeOriginalTitle;
+      }
       node.classList.remove("cfe-course-page-title");
     });
     document.querySelectorAll(".cfe-course-page-copy").forEach((node) => {
@@ -503,15 +554,29 @@
     const leftSide = document.querySelector("#left-side, .ic-Layout-aside");
     const sectionTabs = leftSide?.querySelector("#section-tabs");
     if (leftSide && sectionTabs) {
-      let identity = leftSide.querySelector(":scope > .cfe-course-identity");
+      const navHost = sectionTabs.parentElement || leftSide;
+      const identities = Array.from(
+        leftSide.querySelectorAll(".cfe-course-identity"),
+      );
+      let identity =
+        identities.find((node) => node.parentElement === navHost) ||
+        identities[0] ||
+        null;
+      identities.forEach((node) => {
+        if (node !== identity) node.remove();
+      });
       if (!identity) {
         identity = createCourseIdentity(courseName);
+      }
+      if (
+        identity.parentElement !== navHost ||
+        identity.nextElementSibling !== sectionTabs
+      ) {
         sectionTabs.before(identity);
-      } else {
-        const title = identity.querySelector(".cfe-course-identity-title");
-        if (title && title.textContent !== courseName) {
-          title.textContent = courseName;
-        }
+      }
+      const title = identity.querySelector(".cfe-course-identity-title");
+      if (title && title.textContent !== courseName) {
+        title.textContent = courseName;
       }
     }
     ensureCoursePageHeader(courseName);
@@ -1778,7 +1843,7 @@
           });
         }
         if (
-          isCourseHomePath(path) &&
+          getCourseRouteContext(path).isCourseHome &&
           !document.getElementById("cfe-course-due-widget")
         ) {
           renderCourseDueWidgetForCurrentPage().catch(() => {
@@ -1929,7 +1994,7 @@
 
   function ensureAuthWall() {
     const path = window.location.pathname || "/";
-    if (!isDashboardPath(path) && !isCourseHomePath(path)) {
+    if (!isDashboardPath(path) && !getCourseRouteContext(path).isCourseHome) {
       removeAuthWall();
       return;
     }
@@ -2944,8 +3009,15 @@
 
   async function renderCourseDueWidgetForCurrentPage(options = {}) {
     if (!isExtensionContextValid()) return;
-    if (!isCourseHomePath(window.location.pathname || "")) return;
-    const courseId = getCourseIdFromPath(window.location.pathname || "");
+    const path = window.location.pathname || "";
+    if (!isCourseHomePath(path)) return;
+    if (!getCourseRouteContext(path).isCourseHome) {
+      document
+        .querySelectorAll("#cfe-course-due-widget, #cfe-course-widget-board")
+        .forEach((node) => node.remove());
+      return;
+    }
+    const courseId = getCourseIdFromPath(path);
     if (!courseId) return;
 
     const { canvasSettings } = await chrome.storage.sync.get("canvasSettings");
