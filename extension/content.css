@@ -7856,3 +7856,564 @@ html.cfe-data-experience-active body.cfe-theme-applied .cfe-course-data-experien
         padding: 20px 16px !important;
     }
 }
+
+/* Shared collection, table, and master-detail components from the approved
+   Superdesign course system. */
+body.cfe-theme-applied .cfe-collection-controls {
+    display: flex;
+    min-height: 64px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: var(--cfe-surface-alt);
+    border-radius: 10px;
+}
+
+body.cfe-theme-applied .cfe-collection-controls label {
+    flex: 1 1 auto;
+}
+
+body.cfe-theme-applied .cfe-collection-controls input {
+    width: 100%;
+    min-height: 38px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    color: var(--cfe-text) !important;
+    background: var(--cfe-surface) !important;
+    border: 1px solid var(--cfe-border) !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    font-family: var(--cfe-font-body) !important;
+    font-size: 12px !important;
+}
+
+body.cfe-theme-applied .cfe-collection-controls > span {
+    flex: 0 0 auto;
+    color: var(--cfe-muted);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+body.cfe-theme-applied .cfe-collection-empty {
+    padding: 28px 20px;
+    color: var(--cfe-muted);
+    font-size: 11px;
+    text-align: center;
+}
+
+body.cfe-theme-applied .cfe-module-list,
+body.cfe-theme-applied .cfe-assignment-groups {
+    display: grid;
+    gap: 16px;
+}
+
+body.cfe-theme-applied .cfe-module-card,
+body.cfe-theme-applied .cfe-assignment-group {
+    overflow: hidden;
+    background: var(--cfe-surface);
+    border: 1px solid var(--cfe-border);
+    border-radius: 10px;
+}
+
+body.cfe-theme-applied .cfe-module-card > header,
+body.cfe-theme-applied .cfe-assignment-group > header {
+    display: flex;
+    min-height: 54px;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--cfe-surface-alt);
+    border-bottom: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-module-card > header button {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    min-height: 28px !important;
+    place-items: center;
+    padding: 0 !important;
+    color: var(--cfe-muted) !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    font-size: 18px !important;
+}
+
+body.cfe-theme-applied .cfe-module-card > header div,
+body.cfe-theme-applied .cfe-assignment-group > header div {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+body.cfe-theme-applied .cfe-module-card > header h2,
+body.cfe-theme-applied .cfe-assignment-group > header h2 {
+    margin: 0;
+    color: var(--cfe-text);
+    font-family: var(--cfe-font-body);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+body.cfe-theme-applied .cfe-module-card > header p,
+body.cfe-theme-applied .cfe-assignment-group > header p {
+    margin: 2px 0 0;
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-module-card > header > span {
+    color: var(--cfe-muted);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+body.cfe-theme-applied .cfe-module-item {
+    display: grid;
+    min-height: 50px;
+    grid-template-columns: 24px minmax(0, 1fr) 90px;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    color: var(--cfe-text) !important;
+    border-bottom: 1px solid var(--cfe-divider);
+    text-decoration: none !important;
+}
+
+body.cfe-theme-applied .cfe-module-item:last-child {
+    border-bottom: 0;
+}
+
+body.cfe-theme-applied .cfe-module-item:hover {
+    background: var(--cfe-hover);
+}
+
+body.cfe-theme-applied .cfe-module-item > span {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    color: var(--cfe-accent);
+    background: var(--cfe-accent-soft);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+body.cfe-theme-applied .cfe-module-item div {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+body.cfe-theme-applied .cfe-module-item strong,
+body.cfe-theme-applied .cfe-assignment-row strong,
+body.cfe-theme-applied .cfe-data-table strong {
+    overflow: hidden;
+    color: var(--cfe-text);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.cfe-theme-applied .cfe-module-item small,
+body.cfe-theme-applied .cfe-assignment-row small,
+body.cfe-theme-applied .cfe-data-table small {
+    overflow: hidden;
+    color: var(--cfe-muted);
+    font-size: 9px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.cfe-theme-applied .cfe-module-item em {
+    color: var(--cfe-muted);
+    font-size: 10px;
+    font-style: normal;
+    text-align: right;
+}
+
+body.cfe-theme-applied .cfe-assignment-columns,
+body.cfe-theme-applied .cfe-assignment-row {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) 150px 72px 112px;
+    align-items: center;
+    gap: 12px;
+}
+
+body.cfe-theme-applied .cfe-assignment-columns {
+    min-height: 34px;
+    padding: 0 16px;
+    color: var(--cfe-muted);
+    background: var(--cfe-surface);
+    border-bottom: 1px solid var(--cfe-divider);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+body.cfe-theme-applied .cfe-assignment-row {
+    min-height: 54px;
+    padding: 8px 16px;
+    color: var(--cfe-text) !important;
+    border-bottom: 1px solid var(--cfe-divider);
+    text-decoration: none !important;
+}
+
+body.cfe-theme-applied .cfe-assignment-row:last-child {
+    border-bottom: 0;
+}
+
+body.cfe-theme-applied .cfe-assignment-row:hover {
+    background: var(--cfe-hover);
+}
+
+body.cfe-theme-applied .cfe-assignment-row > div,
+body.cfe-theme-applied .cfe-data-table a > div {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+body.cfe-theme-applied .cfe-assignment-row > span {
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied :where(
+    .cfe-assignment-row em,
+    .cfe-data-table em
+) {
+    justify-self: end;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+body.cfe-theme-applied :where(.cfe-assignment-row em, .cfe-data-table em).is-success {
+    color: var(--cfe-success);
+    background: var(--cfe-success-soft);
+}
+
+body.cfe-theme-applied :where(.cfe-assignment-row em, .cfe-data-table em).is-warning {
+    color: var(--cfe-warning);
+    background: var(--cfe-warning-soft);
+}
+
+body.cfe-theme-applied :where(.cfe-assignment-row em, .cfe-data-table em).is-danger {
+    color: var(--cfe-danger, #a63d32);
+    background: var(--cfe-danger-soft, #fbeceb);
+}
+
+body.cfe-theme-applied :where(.cfe-assignment-row em, .cfe-data-table em).is-muted {
+    color: var(--cfe-muted);
+    background: var(--cfe-surface-alt);
+}
+
+body.cfe-theme-applied .cfe-grade-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+body.cfe-theme-applied .cfe-grade-summary > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 14px;
+    padding: 14px 18px;
+    background: var(--cfe-accent-soft);
+    border-radius: 10px;
+}
+
+body.cfe-theme-applied .cfe-grade-summary span {
+    color: var(--cfe-accent);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+body.cfe-theme-applied .cfe-grade-summary strong {
+    grid-row: span 2;
+    color: var(--cfe-accent-strong);
+    font-family: var(--cfe-font-head);
+    font-size: 22px;
+    font-weight: 600;
+}
+
+body.cfe-theme-applied .cfe-grade-summary p {
+    margin: 0;
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-data-table {
+    overflow: hidden;
+    background: var(--cfe-surface);
+    border: 1px solid var(--cfe-border);
+    border-radius: 10px;
+}
+
+body.cfe-theme-applied .cfe-data-table > header,
+body.cfe-theme-applied .cfe-data-table > a {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) 130px 130px 120px;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+}
+
+body.cfe-theme-applied .cfe-data-table > header {
+    min-height: 38px;
+    color: var(--cfe-muted);
+    background: var(--cfe-surface-alt);
+    border-bottom: 1px solid var(--cfe-divider);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+body.cfe-theme-applied .cfe-data-table > a {
+    min-height: 52px;
+    color: var(--cfe-text) !important;
+    border-bottom: 1px solid var(--cfe-divider);
+    text-decoration: none !important;
+}
+
+body.cfe-theme-applied .cfe-data-table > a:last-child {
+    border-bottom: 0;
+}
+
+body.cfe-theme-applied .cfe-data-table > a:hover {
+    background: var(--cfe-hover);
+}
+
+body.cfe-theme-applied .cfe-data-table > a > span,
+body.cfe-theme-applied .cfe-data-table > a > b {
+    color: var(--cfe-muted);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+body.cfe-theme-applied .cfe-data-table > a > b {
+    color: var(--cfe-text);
+    text-align: right;
+}
+
+body.cfe-theme-applied .cfe-person-cell {
+    display: flex !important;
+    align-items: center;
+    gap: 10px !important;
+}
+
+body.cfe-theme-applied .cfe-person-cell i {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    place-items: center;
+    color: var(--cfe-accent);
+    background: var(--cfe-accent-soft);
+    border-radius: 999px;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 600;
+}
+
+body.cfe-theme-applied .cfe-person-cell > span {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+body.cfe-theme-applied .cfe-pages-grid {
+    display: grid;
+    grid-template-columns: minmax(330px, .82fr) minmax(450px, 1.18fr);
+    align-items: start;
+    gap: 20px;
+}
+
+body.cfe-theme-applied .cfe-page-index,
+body.cfe-theme-applied .cfe-page-reader {
+    overflow: hidden;
+    background: var(--cfe-surface);
+    border: 1px solid var(--cfe-border);
+    border-radius: 10px;
+}
+
+body.cfe-theme-applied .cfe-page-index > header {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: var(--cfe-surface-alt);
+    border-bottom: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-page-index > header h2 {
+    margin: 0;
+    font-family: var(--cfe-font-body);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+body.cfe-theme-applied .cfe-page-index > header span {
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-page-index > label {
+    display: block;
+    padding: 10px;
+    border-bottom: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-page-index input {
+    width: 100%;
+    min-height: 36px !important;
+    margin: 0 !important;
+    padding: 0 10px !important;
+    color: var(--cfe-text) !important;
+    background: var(--cfe-surface) !important;
+    border: 1px solid var(--cfe-border) !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    font-size: 11px !important;
+}
+
+body.cfe-theme-applied .cfe-page-index button {
+    display: grid !important;
+    width: 100%;
+    min-height: 58px !important;
+    gap: 3px;
+    margin: 0 !important;
+    padding: 10px 16px !important;
+    color: var(--cfe-text) !important;
+    background: var(--cfe-surface) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--cfe-divider) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    text-align: left;
+}
+
+body.cfe-theme-applied .cfe-page-index button:hover,
+body.cfe-theme-applied .cfe-page-index button.is-active {
+    background: var(--cfe-accent-soft) !important;
+}
+
+body.cfe-theme-applied .cfe-page-index button strong {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+body.cfe-theme-applied .cfe-page-index button small {
+    color: var(--cfe-muted);
+    font-size: 9px;
+}
+
+body.cfe-theme-applied .cfe-page-reader > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-page-reader > header span {
+    color: var(--cfe-muted);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+body.cfe-theme-applied .cfe-page-reader > header h2 {
+    margin: 3px 0 0;
+    font-family: var(--cfe-font-head);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+body.cfe-theme-applied .cfe-page-reader > header p {
+    margin: 4px 0 0;
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-page-reader > header a {
+    flex: 0 0 auto;
+    color: var(--cfe-accent) !important;
+    font-size: 10px;
+    font-weight: 600;
+    text-decoration: none !important;
+}
+
+body.cfe-theme-applied .cfe-page-body {
+    padding: 22px;
+    color: var(--cfe-text) !important;
+    font-size: 12px !important;
+    line-height: 1.75 !important;
+}
+
+body.cfe-theme-applied .cfe-page-body :where(p, li) {
+    color: var(--cfe-text) !important;
+    font-size: 12px !important;
+    line-height: 1.75 !important;
+}
+
+body.cfe-theme-applied .cfe-page-body :where(h1, h2, h3) {
+    color: var(--cfe-text) !important;
+    font-family: var(--cfe-font-head) !important;
+    font-weight: 600 !important;
+}
+
+@media (max-width: 1100px) {
+    body.cfe-theme-applied .cfe-pages-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 760px) {
+    body.cfe-theme-applied .cfe-collection-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    body.cfe-theme-applied .cfe-assignment-columns,
+    body.cfe-theme-applied .cfe-data-table > header {
+        display: none;
+    }
+
+    body.cfe-theme-applied .cfe-assignment-row,
+    body.cfe-theme-applied .cfe-data-table > a {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 6px 10px;
+        padding: 12px 14px;
+    }
+
+    body.cfe-theme-applied .cfe-assignment-row > span,
+    body.cfe-theme-applied .cfe-data-table > a > span {
+        display: none;
+    }
+
+    body.cfe-theme-applied .cfe-grade-summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

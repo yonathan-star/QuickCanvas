@@ -718,7 +718,9 @@
     </article>`;
   }
 
-  function renderAnnouncementsExperience(topics, courseName, selectedId) {
+  function renderAnnouncementsExperience(topics, courseName, selectedId, options = {}) {
+    const isDiscussion = options.kind === "discussions";
+    const plural = isDiscussion ? "discussions" : "announcements";
     const safeTopics = Array.isArray(topics) ? topics.filter(Boolean) : [];
     let activeId = String(
       safeTopics.find((topic) => String(topic.id) === String(selectedId))?.id ||
@@ -729,19 +731,22 @@
     let filterText = "";
     let filterMode = "all";
     const root = document.createElement("section");
-    root.className = "cfe-course-data-experience cfe-announcements-experience";
-    root.dataset.cfeExperience = "announcements";
+    root.className = `cfe-course-data-experience cfe-${plural}-experience`;
+    root.dataset.cfeExperience = plural;
     const createLink = Array.from(document.querySelectorAll("a[href]")).find(
-      (link) => /\/announcements\/new(?:\?|$)/.test(link.getAttribute("href") || ""),
+      (link) =>
+        (isDiscussion ? /\/discussion_topics\/new(?:\?|$)/ : /\/announcements\/new(?:\?|$)/).test(
+          link.getAttribute("href") || "",
+        ),
     );
     root.innerHTML = `
       <header class="cfe-data-page-header">
-        <div class="cfe-data-page-copy"><p class="cfe-data-eyebrow">Course communication</p><h1>Announcements</h1><p>Updates and notices from ${escapeHtml(courseName)}.</p></div>
-        ${createLink?.href ? `<div class="cfe-data-page-actions"><a class="is-primary" href="${escapeAttr(createLink.href)}">+ Announcement</a></div>` : ""}
+        <div class="cfe-data-page-copy"><p class="cfe-data-eyebrow">${isDiscussion ? "Course conversations" : "Course communication"}</p><h1>${isDiscussion ? "Discussions" : "Announcements"}</h1><p>${isDiscussion ? `Read closely and contribute thoughtfully in ${escapeHtml(courseName)}.` : `Updates and notices from ${escapeHtml(courseName)}.`}</p></div>
+        ${createLink?.href ? `<div class="cfe-data-page-actions"><a class="is-primary" href="${escapeAttr(createLink.href)}">+ ${isDiscussion ? "Discussion" : "Announcement"}</a></div>` : ""}
       </header>
-      <div class="cfe-announcement-controls"><label><span class="screenreader-only">Search announcements</span><input type="search" placeholder="Search announcements"></label><button type="button" data-cfe-announcement-filter>All announcements</button></div>
+      <div class="cfe-announcement-controls"><label><span class="screenreader-only">Search ${plural}</span><input type="search" placeholder="Search ${plural}"></label><button type="button" data-cfe-announcement-filter>All ${plural}</button></div>
       <div class="cfe-announcements-grid">
-        <section class="cfe-announcement-list" aria-label="Announcement list"><header><h2>Recent announcements</h2><span>${safeTopics.length} total</span></header><div data-cfe-announcement-list></div></section>
+        <section class="cfe-announcement-list" aria-label="${isDiscussion ? "Discussion topic" : "Announcement"} list"><header><h2>${isDiscussion ? "Discussion topics" : "Recent announcements"}</h2><span>${safeTopics.length} total</span></header><div data-cfe-announcement-list></div></section>
         <div data-cfe-announcement-detail></div>
       </div>`;
     const list = root.querySelector("[data-cfe-announcement-list]");
@@ -787,7 +792,7 @@
           filterMode === "all" ? "unread" : filterMode === "unread" ? "pinned" : "all";
         event.currentTarget.textContent =
           filterMode === "all"
-            ? "All announcements"
+            ? `All ${plural}`
             : filterMode === "unread"
               ? "Unread"
               : "Pinned";
@@ -797,17 +802,329 @@
     return root;
   }
 
+  function courseExperienceKind(route) {
+    if (route.isSyllabus) return "syllabus";
+    if (route.isAnnouncements) return "announcements";
+    if (route.isModules) return "modules";
+    if (route.isAssignments && !route.isAssignmentDetail) return "assignments";
+    if (route.isDiscussions && !route.isDiscussionDetail) return "discussions";
+    if (route.isGrades) return "grades";
+    if (route.isPeople) return "people";
+    if (route.isPages) return "pages";
+    if (route.isFiles) return "files";
+    if (route.isQuizzes && !isQuizLikePath(window.location.pathname || "")) {
+      return "quizzes";
+    }
+    return "";
+  }
+
+  async function fetchCanvasJson(url) {
+    const response = await fetch(url, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+
+  function createDataExperienceRoot({ kind, eyebrow, title, description }) {
+    const root = document.createElement("section");
+    root.className = `cfe-course-data-experience cfe-${kind}-experience cfe-collection-experience`;
+    root.dataset.cfeExperience = kind;
+    root.innerHTML = `
+      <header class="cfe-data-page-header">
+        <div class="cfe-data-page-copy"><p class="cfe-data-eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></div>
+      </header>`;
+    return root;
+  }
+
+  function bindCollectionSearch(root, rowSelector) {
+    const input = root.querySelector("[data-cfe-collection-search]");
+    if (!input) return;
+    input.addEventListener("input", () => {
+      const query = String(input.value || "").trim().toLowerCase();
+      root.querySelectorAll(rowSelector).forEach((row) => {
+        row.hidden = Boolean(
+          query &&
+            !String(row.textContent || "").toLowerCase().includes(query),
+        );
+      });
+    });
+  }
+
+  function moduleItemIcon(type) {
+    const normalized = String(type || "").toLowerCase();
+    if (normalized.includes("quiz")) return "✓";
+    if (normalized.includes("assignment")) return "▣";
+    if (normalized.includes("discussion")) return "◌";
+    if (normalized.includes("file")) return "▤";
+    return "•";
+  }
+
+  function renderModulesExperience(modules, courseName) {
+    const safeModules = Array.isArray(modules) ? modules.filter(Boolean) : [];
+    const root = createDataExperienceRoot({
+      kind: "modules",
+      eyebrow: "Course content",
+      title: "Modules",
+      description: `Organized learning materials for ${courseName}.`,
+    });
+    root.insertAdjacentHTML(
+      "beforeend",
+      `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search modules</span><input data-cfe-collection-search type="search" placeholder="Search modules and items"></label><span>${safeModules.length} modules</span></div>
+      <div class="cfe-module-list">${safeModules
+        .map((module, moduleIndex) => {
+          const items = Array.isArray(module?.items) ? module.items : [];
+          const completed = items.filter(
+            (item) => item?.completion_requirement?.completed,
+          ).length;
+          return `<section class="cfe-module-card" data-cfe-module>
+            <header><button type="button" data-cfe-module-toggle aria-expanded="true">⌄</button><div><h2>${escapeHtml(module?.name || `Module ${moduleIndex + 1}`)}</h2><p>${items.length} items${items.length ? ` · ${completed}/${items.length} complete` : ""}</p></div><span>${module?.state === "completed" ? "Complete" : module?.published === false ? "Unpublished" : "Published"}</span></header>
+            <div data-cfe-module-items>${items.length ? items.map((item) => `<a class="cfe-module-item" data-cfe-collection-row href="${escapeAttr(sanitizeHref(item?.html_url || item?.url || "#"))}"><span>${moduleItemIcon(item?.type)}</span><div><strong>${escapeHtml(item?.title || "Module item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></div><em>${item?.completion_requirement?.completed ? "Completed" : item?.completion_requirement ? "To do" : ""}</em></a>`).join("") : '<div class="cfe-collection-empty">No items in this module.</div>'}</div>
+          </section>`;
+        })
+        .join("") || '<div class="cfe-collection-empty">No modules are available yet.</div>'}</div>`,
+    );
+    root.querySelectorAll("[data-cfe-module-toggle]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const card = button.closest("[data-cfe-module]");
+        const items = card?.querySelector("[data-cfe-module-items]");
+        const expanded = button.getAttribute("aria-expanded") !== "false";
+        button.setAttribute("aria-expanded", String(!expanded));
+        button.textContent = expanded ? "›" : "⌄";
+        if (items) items.hidden = expanded;
+      });
+    });
+    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    return root;
+  }
+
+  function assignmentStatus(assignment) {
+    const submission = assignment?.submission || {};
+    if (submission?.excused) return { label: "Excused", tone: "muted" };
+    if (submission?.missing) return { label: "Missing", tone: "danger" };
+    if (submission?.late) return { label: "Late", tone: "warning" };
+    if (submission?.workflow_state === "graded") {
+      return { label: "Graded", tone: "success" };
+    }
+    if (submission?.submitted_at) return { label: "Submitted", tone: "success" };
+    const due = new Date(assignment?.due_at || "");
+    if (!Number.isNaN(due.getTime()) && due < new Date()) {
+      return { label: "Overdue", tone: "danger" };
+    }
+    return { label: "Not submitted", tone: "muted" };
+  }
+
+  function formatCourseDateTime(value) {
+    const date = new Date(value || "");
+    if (Number.isNaN(date.getTime())) return "No due date";
+    return date.toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  function renderAssignmentsExperience(assignments, groups, courseName) {
+    const safeAssignments = Array.isArray(assignments)
+      ? assignments.filter(Boolean)
+      : [];
+    const groupNames = new Map(
+      (Array.isArray(groups) ? groups : []).map((group) => [
+        String(group?.id),
+        group?.name || "Assignments",
+      ]),
+    );
+    const grouped = new Map();
+    safeAssignments.forEach((assignment) => {
+      const key = String(assignment?.assignment_group_id || "other");
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(assignment);
+    });
+    const root = createDataExperienceRoot({
+      kind: "assignments",
+      eyebrow: "Course content",
+      title: "Assignments",
+      description: `Upcoming work and submission status for ${courseName}.`,
+    });
+    root.insertAdjacentHTML(
+      "beforeend",
+      `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search assignments</span><input data-cfe-collection-search type="search" placeholder="Search assignments"></label><span>${safeAssignments.length} assignments</span></div>
+      <div class="cfe-assignment-groups">${Array.from(grouped.entries())
+        .map(([groupId, items]) => `<section class="cfe-assignment-group"><header><div><h2>${escapeHtml(groupNames.get(groupId) || "Assignments")}</h2><p>${items.length} assignments · ${items.reduce((sum, item) => sum + Number(item?.points_possible || 0), 0)} points</p></div></header><div class="cfe-assignment-columns"><span>Assignment</span><span>Due</span><span>Points</span><span>Status</span></div>${items.map((assignment) => {
+          const status = assignmentStatus(assignment);
+          const submissionTypes = Array.isArray(assignment?.submission_types)
+            ? assignment.submission_types.join(", ").replaceAll("_", " ")
+            : "Course work";
+          return `<a class="cfe-assignment-row" data-cfe-collection-row href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(submissionTypes)}</small></div><span>${escapeHtml(formatCourseDateTime(assignment?.due_at))}</span><span>${escapeHtml(String(assignment?.points_possible ?? "—"))}</span><em class="is-${status.tone}">${escapeHtml(status.label)}</em></a>`;
+        }).join("")}</section>`)
+        .join("") || '<div class="cfe-collection-empty">No assignments are available yet.</div>'}</div>`,
+    );
+    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    return root;
+  }
+
+  function renderGradesExperience(assignments, courseName) {
+    const rows = (Array.isArray(assignments) ? assignments : []).filter(Boolean);
+    const scored = rows.filter((item) => Number.isFinite(Number(item?.submission?.score)));
+    const earned = scored.reduce(
+      (sum, item) => sum + Number(item?.submission?.score || 0),
+      0,
+    );
+    const possible = scored.reduce(
+      (sum, item) => sum + Number(item?.points_possible || 0),
+      0,
+    );
+    const percent = possible > 0 ? Math.round((earned / possible) * 1000) / 10 : null;
+    const root = createDataExperienceRoot({
+      kind: "grades",
+      eyebrow: "Student record",
+      title: "Grades",
+      description: `Scores, feedback, and progress in ${courseName}.`,
+    });
+    root.insertAdjacentHTML(
+      "beforeend",
+      `<section class="cfe-grade-summary"><div><span>Current total</span><strong>${percent === null ? "—" : `${percent}%`}</strong><p>Based on graded work</p></div><div><span>Points earned</span><strong>${earned.toFixed(1)} / ${possible.toFixed(1)}</strong><p>${scored.length} graded assignments</p></div></section>
+      <div class="cfe-collection-controls"><label><span class="screenreader-only">Search grades</span><input data-cfe-collection-search type="search" placeholder="Search graded work"></label><span>${rows.length} items</span></div>
+      <section class="cfe-data-table"><header><span>Assignment</span><span>Due</span><span>Status</span><span>Score</span></header>${rows.map((assignment) => {
+        const status = assignmentStatus(assignment);
+        const score = assignment?.submission?.score;
+        return `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.grade || ""))}</small></div><span>${escapeHtml(formatCourseDate(assignment?.due_at))}</span><em class="is-${status.tone}">${escapeHtml(status.label)}</em><b>${score === null || score === undefined ? "—" : escapeHtml(String(score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))}</b></a>`;
+      }).join("") || '<div class="cfe-collection-empty">No grade information is available.</div>'}</section>`,
+    );
+    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    return root;
+  }
+
+  function personRole(person) {
+    const enrollments = Array.isArray(person?.enrollments) ? person.enrollments : [];
+    const type = String(enrollments[0]?.type || enrollments[0]?.role || "Student");
+    return type.replace(/Enrollment$/i, "").replace(/([a-z])([A-Z])/g, "$1 $2");
+  }
+
+  function renderPeopleExperience(people, courseName) {
+    const rows = (Array.isArray(people) ? people : []).filter(Boolean);
+    const root = createDataExperienceRoot({
+      kind: "people",
+      eyebrow: "Course roster",
+      title: "People",
+      description: `Classmates, instructors, and course groups in ${courseName}.`,
+    });
+    root.insertAdjacentHTML(
+      "beforeend",
+      `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search people</span><input data-cfe-collection-search type="search" placeholder="Search people"></label><span>${rows.length} people</span></div>
+      <section class="cfe-data-table cfe-people-table"><header><span>Person</span><span>Role</span><span>Section</span><span>Status</span></header>${rows.map((person) => {
+        const name = person?.display_name || person?.name || "Canvas user";
+        const enrollment = Array.isArray(person?.enrollments) ? person.enrollments[0] : null;
+        return `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(person?.html_url || person?.url || "#"))}"><div class="cfe-person-cell"><i>${escapeHtml(announcementInitials(name))}</i><span><strong>${escapeHtml(name)}</strong><small>${escapeHtml(person?.sortable_name || "Enrolled")}</small></span></div><span>${escapeHtml(personRole(person))}</span><span>${escapeHtml(enrollment?.sis_section_id || enrollment?.course_section_id ? `Section ${enrollment?.course_section_id || enrollment?.sis_section_id}` : "Course section")}</span><em class="is-${enrollment?.enrollment_state === "active" ? "success" : "muted"}">${escapeHtml(enrollment?.enrollment_state || "Active")}</em></a>`;
+      }).join("") || '<div class="cfe-collection-empty">The course roster is unavailable.</div>'}</section>`,
+    );
+    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    return root;
+  }
+
+  function renderQuizzesExperience(quizzes, courseName) {
+    const rows = (Array.isArray(quizzes) ? quizzes : []).filter(Boolean);
+    const root = createDataExperienceRoot({
+      kind: "quizzes",
+      eyebrow: "Assessment",
+      title: "Quizzes & Assessments",
+      description: `Instructions, attempts, and assessment status for ${courseName}.`,
+    });
+    root.insertAdjacentHTML(
+      "beforeend",
+      `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search quizzes</span><input data-cfe-collection-search type="search" placeholder="Search quizzes and assessments"></label><span>${rows.length} assessments</span></div>
+      <section class="cfe-data-table cfe-quiz-table"><header><span>Assessment</span><span>Due</span><span>Questions</span><span>Points</span></header>${rows.map((quiz) => `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(quiz?.html_url || "#"))}"><div><strong>${escapeHtml(quiz?.title || "Assessment")}</strong><small>${quiz?.time_limit ? `${escapeHtml(String(quiz.time_limit))} minute limit` : "No time limit"}</small></div><span>${escapeHtml(formatCourseDateTime(quiz?.due_at))}</span><span>${escapeHtml(String(quiz?.question_count ?? "—"))}</span><b>${escapeHtml(String(quiz?.points_possible ?? "—"))}</b></a>`).join("") || '<div class="cfe-collection-empty">No assessments are available.</div>'}</section>`,
+    );
+    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    return root;
+  }
+
+  function renderFilesExperience(files, courseName) {
+    const rows = (Array.isArray(files) ? files : []).filter(Boolean);
+    const root = createDataExperienceRoot({
+      kind: "files",
+      eyebrow: "Course content",
+      title: "Course Files",
+      description: `Shared documents and resources for ${courseName}.`,
+    });
+    root.insertAdjacentHTML(
+      "beforeend",
+      `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search files</span><input data-cfe-collection-search type="search" placeholder="Search course files"></label><span>${rows.length} files</span></div>
+      <section class="cfe-data-table cfe-files-table"><header><span>Name</span><span>Size</span><span>Modified</span><span>Type</span></header>${rows.map((file) => `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(file?.url || file?.preview_url || "#"))}"><div><strong>${escapeHtml(file?.display_name || file?.filename || "Course file")}</strong><small>${escapeHtml(file?.folder_id ? `Folder ${file.folder_id}` : "Course file")}</small></div><span>${escapeHtml(file?.size ? `${Math.max(1, Math.round(Number(file.size) / 1024))} KB` : "—")}</span><span>${escapeHtml(formatCourseDate(file?.modified_at || file?.updated_at))}</span><b>${escapeHtml(file?.content_type || "File")}</b></a>`).join("") || '<div class="cfe-collection-empty">No course files are available.</div>'}</section>`,
+    );
+    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    return root;
+  }
+
+  function renderPagesExperience(pages, selectedPage, courseName, courseId) {
+    const rows = (Array.isArray(pages) ? pages : []).filter(Boolean);
+    let activePage = selectedPage || rows[0] || null;
+    const root = createDataExperienceRoot({
+      kind: "pages",
+      eyebrow: "Course content",
+      title: "Pages & Files",
+      description: `Course reading and shared resources for ${courseName}.`,
+    });
+    root.insertAdjacentHTML(
+      "beforeend",
+      `<div class="cfe-pages-grid"><section class="cfe-page-index"><header><h2>Pages index</h2><span>${rows.length} pages</span></header><label><span class="screenreader-only">Filter pages</span><input data-cfe-collection-search placeholder="Filter pages"></label><div>${rows.map((page) => `<button type="button" data-cfe-page-url="${escapeAttr(page?.url || "")}" data-cfe-collection-row><strong>${escapeHtml(page?.title || "Course page")}</strong><small>${page?.front_page ? "Front page · " : ""}Updated ${escapeHtml(formatCourseDate(page?.updated_at))}</small></button>`).join("") || '<div class="cfe-collection-empty">No pages are available.</div>'}</div></section><article class="cfe-page-reader" data-cfe-page-reader></article></div>`,
+    );
+    const reader = root.querySelector("[data-cfe-page-reader]");
+    const paintReader = (page) => {
+      activePage = page;
+      if (!reader) return;
+      reader.innerHTML = page
+        ? `<header><div><span>Pages</span><h2>${escapeHtml(page?.title || "Course page")}</h2><p>Last edited ${escapeHtml(formatCourseDate(page?.updated_at, { includeYear: true }))}</p></div><a href="${escapeAttr(sanitizeHref(page?.html_url || "#"))}">Open in Canvas</a></header><div class="cfe-page-body user_content">${sanitizeCanvasRichHtml(page?.body || "<p>This page is available in Canvas.</p>")}</div>`
+        : '<div class="cfe-collection-empty">Select a page to read it.</div>';
+      root.querySelectorAll("[data-cfe-page-url]").forEach((button) =>
+        button.classList.toggle(
+          "is-active",
+          button.getAttribute("data-cfe-page-url") === activePage?.url,
+        ),
+      );
+    };
+    root.querySelectorAll("[data-cfe-page-url]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const pageUrl = button.getAttribute("data-cfe-page-url") || "";
+        if (!pageUrl) return;
+        button.disabled = true;
+        try {
+          const page = await fetchCanvasJson(
+            `${window.location.origin}/api/v1/courses/${courseId}/pages/${encodeURIComponent(pageUrl)}`,
+          );
+          paintReader(page);
+        } catch (error) {
+          const fallback = rows.find((item) => item?.url === pageUrl);
+          paintReader(fallback);
+        } finally {
+          button.disabled = false;
+        }
+      });
+    });
+    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    paintReader(activePage);
+    return root;
+  }
+
+  function renderDiscussionsExperience(topics, courseName, selectedId) {
+    return renderAnnouncementsExperience(topics, courseName, selectedId, {
+      kind: "discussions",
+    });
+  }
+
   async function ensureCourseDataExperience(courseName) {
     const path = window.location.pathname || "";
     const route = getCourseRouteContext(path);
-    if (!route.isSyllabus && !route.isAnnouncements) {
+    const experience = courseExperienceKind(route);
+    if (!experience) {
       removeCourseDataExperience();
       return;
     }
     const courseId = getCourseIdFromPath(path);
     const content = document.querySelector("#content, .ic-Layout-contentMain");
     if (!courseId || !content) return;
-    const experience = route.isSyllabus ? "syllabus" : "announcements";
     const existing = document.querySelector(
       `.cfe-course-data-experience[data-cfe-experience="${experience}"]`,
     );
@@ -832,23 +1149,88 @@
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         root = renderSyllabusExperience(await response.json(), courseName);
-      } else {
+      } else if (experience === "announcements" || experience === "discussions") {
         const url = new URL(
           `${window.location.origin}/api/v1/courses/${courseId}/discussion_topics`,
         );
-        url.searchParams.set("only_announcements", "true");
+        if (experience === "announcements") {
+          url.searchParams.set("only_announcements", "true");
+        } else {
+          url.searchParams.set("exclude_announcements", "true");
+        }
         url.searchParams.set("per_page", "50");
-        const response = await fetch(url, {
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const topics = await fetchCanvasJson(url);
         const selectedId = path.match(/\/(?:announcements|discussion_topics)\/(\d+)/)?.[1] || "";
-        root = renderAnnouncementsExperience(
-          await response.json(),
-          courseName,
-          selectedId,
+        root =
+          experience === "announcements"
+            ? renderAnnouncementsExperience(topics, courseName, selectedId)
+            : renderDiscussionsExperience(topics, courseName, selectedId);
+      } else if (experience === "modules") {
+        const url = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/modules`,
         );
+        url.searchParams.set("per_page", "50");
+        url.searchParams.append("include[]", "items");
+        root = renderModulesExperience(await fetchCanvasJson(url), courseName);
+      } else if (
+        experience === "assignments" ||
+        experience === "grades"
+      ) {
+        const assignmentsUrl = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/assignments`,
+        );
+        assignmentsUrl.searchParams.set("per_page", "100");
+        assignmentsUrl.searchParams.append("include[]", "submission");
+        const assignments = await fetchCanvasJson(assignmentsUrl);
+        if (experience === "grades") {
+          root = renderGradesExperience(assignments, courseName);
+        } else {
+          const groupsUrl = new URL(
+            `${window.location.origin}/api/v1/courses/${courseId}/assignment_groups`,
+          );
+          groupsUrl.searchParams.set("per_page", "50");
+          const groups = await fetchCanvasJson(groupsUrl).catch(() => []);
+          root = renderAssignmentsExperience(assignments, groups, courseName);
+        }
+      } else if (experience === "people") {
+        const url = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/users`,
+        );
+        url.searchParams.set("per_page", "100");
+        url.searchParams.append("include[]", "enrollments");
+        root = renderPeopleExperience(await fetchCanvasJson(url), courseName);
+      } else if (experience === "quizzes") {
+        const url = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/quizzes`,
+        );
+        url.searchParams.set("per_page", "100");
+        root = renderQuizzesExperience(await fetchCanvasJson(url), courseName);
+      } else if (experience === "files") {
+        const url = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/files`,
+        );
+        url.searchParams.set("per_page", "100");
+        url.searchParams.set("sort", "name");
+        url.searchParams.set("order", "asc");
+        root = renderFilesExperience(await fetchCanvasJson(url), courseName);
+      } else if (experience === "pages") {
+        const url = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/pages`,
+        );
+        url.searchParams.set("per_page", "100");
+        url.searchParams.set("sort", "title");
+        const pages = await fetchCanvasJson(url);
+        let selectedPage = null;
+        const routePageUrl = decodeURIComponent(
+          path.match(/\/(?:pages|wiki)\/([^/?#]+)/)?.[1] || "",
+        );
+        const firstUrl = routePageUrl || pages?.[0]?.url;
+        if (firstUrl) {
+          selectedPage = await fetchCanvasJson(
+            `${window.location.origin}/api/v1/courses/${courseId}/pages/${encodeURIComponent(firstUrl)}`,
+          ).catch(() => pages[0]);
+        }
+        root = renderPagesExperience(pages, selectedPage, courseName, courseId);
       }
       if (requestId !== courseExperienceRequestId || !root) {
         if (requestId === courseExperienceRequestId) removeCourseDataExperience();

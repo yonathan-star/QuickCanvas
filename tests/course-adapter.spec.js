@@ -14,6 +14,10 @@ const contentStyles = fs.readFileSync(
 );
 
 function fixture(activeSection, duplicateCount = 6) {
+  const sections = [
+    "Home", "Announcements", "Syllabus", "Modules", "Assignments",
+    "Discussions", "Grades", "People", "Pages", "Files", "Quizzes",
+  ];
   const identities = Array.from(
     { length: duplicateCount },
     () => `
@@ -32,9 +36,7 @@ function fixture(activeSection, duplicateCount = 6) {
       <div class="ic-Layout-columns">
         <aside id="left-side"><div class="course-navigation">${identities}
           <ul id="section-tabs">
-            <li class="section"><a>Home</a></li>
-            <li class="section ${activeSection === "Announcements" ? "active" : ""}"><a>Announcements</a></li>
-            <li class="section ${activeSection === "Syllabus" ? "active" : ""}"><a>Syllabus</a></li>
+            ${sections.map((section) => `<li class="section ${activeSection === section ? "active" : ""}"><a>${section}</a></li>`).join("")}
           </ul>
         </div></aside>
         <main id="content" class="ic-Layout-contentMain">
@@ -47,7 +49,7 @@ function fixture(activeSection, duplicateCount = 6) {
 }
 
 async function runCase(browser, url, activeSection, options = {}) {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ viewport: options.viewport || { width: 1280, height: 800 } });
   await page.addInitScript(() => {
     const settings = {
       canvasSettings: { enabled: true, baseUrl: "https://canvas.test" },
@@ -86,18 +88,19 @@ async function runCase(browser, url, activeSection, options = {}) {
       return route.fulfill({ status: 403, body: "Forbidden" });
     }
     if (requestUrl.pathname.endsWith("/api/v1/courses/10585/discussion_topics")) {
+      const announcements = requestUrl.searchParams.get("only_announcements") === "true";
       return route.fulfill({
         contentType: "application/json",
         body: JSON.stringify([
           {
             id: 51,
-            title: "Field lab moved",
-            message: "<p>Meet at the east entrance.</p>",
+            title: announcements ? "Field lab moved" : "Derivative strategies",
+            message: announcements ? "<p>Meet at the east entrance.</p>" : "<p>Compare two solution methods.</p>",
             posted_at: "2026-08-31T13:00:00Z",
             pinned: true,
             read_state: "unread",
             author: { display_name: "Dr. Test" },
-            html_url: "https://canvas.test/courses/10585/announcements/51",
+            html_url: `https://canvas.test/courses/10585/${announcements ? "announcements" : "discussion_topics"}/51`,
           },
           {
             id: 52,
@@ -111,6 +114,19 @@ async function runCase(browser, url, activeSection, options = {}) {
           },
         ]),
       });
+    }
+    const collectionFixtures = {
+      "/api/v1/courses/10585/modules": [{ id: 1, name: "Limits", published: true, items: [{ id: 11, title: "Limits overview", type: "Page", html_url: "https://canvas.test/courses/10585/pages/limits" }] }],
+      "/api/v1/courses/10585/assignment_groups": [{ id: 4, name: "Practice" }],
+      "/api/v1/courses/10585/assignments": [{ id: 7, name: "Chapter review", assignment_group_id: 4, due_at: "2026-09-08T13:00:00Z", points_possible: 20, submission_types: ["online_upload"], html_url: "https://canvas.test/courses/10585/assignments/7", submission: { workflow_state: "graded", score: 18, grade: "18" } }],
+      "/api/v1/courses/10585/users": [{ id: 9, display_name: "Ada Student", sortable_name: "Student, Ada", enrollments: [{ type: "StudentEnrollment", enrollment_state: "active", course_section_id: 3 }] }],
+      "/api/v1/courses/10585/quizzes": [{ id: 10, title: "Limits check", due_at: "2026-09-10T13:00:00Z", question_count: 8, points_possible: 10, html_url: "https://canvas.test/courses/10585/quizzes/10" }],
+      "/api/v1/courses/10585/files": [{ id: 12, display_name: "Review guide.pdf", size: 20480, modified_at: "2026-09-01T13:00:00Z", content_type: "application/pdf", url: "https://canvas.test/files/12/download" }],
+      "/api/v1/courses/10585/pages": [{ url: "limits", title: "Limits overview", front_page: true, updated_at: "2026-09-01T13:00:00Z", html_url: "https://canvas.test/courses/10585/pages/limits" }],
+      "/api/v1/courses/10585/pages/limits": { url: "limits", title: "Limits overview", updated_at: "2026-09-01T13:00:00Z", body: "<h2>Learning goals</h2><p>Evaluate limits graphically.</p>", html_url: "https://canvas.test/courses/10585/pages/limits" },
+    };
+    if (Object.hasOwn(collectionFixtures, requestUrl.pathname)) {
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify(collectionFixtures[requestUrl.pathname]) });
     }
     if (requestUrl.pathname.endsWith("/api/v1/courses/10585")) {
       return route.fulfill({
@@ -141,6 +157,13 @@ async function runCase(browser, url, activeSection, options = {}) {
     window.dispatchEvent(new PageTransitionEvent("pageshow"));
   });
   await page.waitForTimeout(1900);
+
+  if (activeSection === "Modules") {
+    await page.locator("[data-cfe-module-toggle]").first().click();
+  }
+  if (["Assignments", "Grades", "People", "Files", "Quizzes"].includes(activeSection)) {
+    await page.locator("[data-cfe-collection-search]").fill("definitely-no-match");
+  }
 
   if (process.env.CFE_CAPTURE_DIR) {
     fs.mkdirSync(process.env.CFE_CAPTURE_DIR, { recursive: true });
@@ -184,6 +207,19 @@ async function runCase(browser, url, activeSection, options = {}) {
       announcementRows: document.querySelectorAll(
         ".cfe-announcement-row",
       ).length,
+      collectionRows: document.querySelectorAll(
+        "[data-cfe-collection-row], [data-cfe-announcement-id]",
+      ).length,
+      experienceTitle: document.querySelector(".cfe-course-data-experience h1")?.textContent,
+      moduleCollapsed:
+        document.querySelector("[data-cfe-module-toggle]")?.getAttribute("aria-expanded") === "false" &&
+        Boolean(document.querySelector("[data-cfe-module-items]")?.hidden),
+      searchFiltered:
+        !document.querySelector("[data-cfe-collection-search]") ||
+        Array.from(document.querySelectorAll("[data-cfe-collection-row]"))
+          .every((row) => row.hidden),
+      horizontalOverflow:
+        document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
     };
   });
   await page.close();
@@ -224,6 +260,45 @@ async function runCase(browser, url, activeSection, options = {}) {
     assert.equal(announcements.nativeHidden, true);
     assert.equal(announcements.announcementDetail, "Field lab moved");
     assert.equal(announcements.announcementRows, 2);
+
+    const routeCases = [
+      ["modules", "Modules", "Modules"],
+      ["assignments", "Assignments", "Assignments"],
+      ["discussion_topics", "Discussions", "Discussions"],
+      ["grades", "Grades", "Grades"],
+      ["users", "People", "People"],
+      ["pages", "Pages", "Pages & Files"],
+      ["files", "Files", "Course Files"],
+      ["quizzes", "Quizzes", "Quizzes & Assessments"],
+    ];
+    for (const [pathName, section, title] of routeCases) {
+      const current = await runCase(
+        browser,
+        `https://canvas.test/courses/10585/${pathName}`,
+        section,
+      );
+      assert.equal(current.identityCount, 1, `${section}: duplicate identity`);
+      assert.equal(current.dataExperience, section.toLowerCase(), `${section}: wrong experience`);
+      assert.equal(current.nativeHidden, true, `${section}: native content remains visible`);
+      assert.equal(current.experienceTitle, title, `${section}: wrong title`);
+      assert.ok(current.collectionRows >= 1, `${section}: no data rows rendered`);
+      assert.equal(current.horizontalOverflow, false, `${section}: horizontal overflow`);
+      if (section === "Modules") {
+        assert.equal(current.moduleCollapsed, true, "Modules: collapse control failed");
+      }
+      if (["Assignments", "Grades", "People", "Files", "Quizzes"].includes(section)) {
+        assert.equal(current.searchFiltered, true, `${section}: search control failed`);
+      }
+    }
+
+    const mobile = await runCase(
+      browser,
+      "https://canvas.test/courses/10585/pages",
+      "Pages",
+      { viewport: { width: 390, height: 844 } },
+    );
+    assert.equal(mobile.dataExperience, "pages");
+    assert.equal(mobile.horizontalOverflow, false, "Pages: mobile horizontal overflow");
 
     const fallback = await runCase(
       browser,
