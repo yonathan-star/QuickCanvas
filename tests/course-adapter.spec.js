@@ -8,6 +8,10 @@ const contentScript = fs.readFileSync(
   path.join(root, "extension", "content.js"),
   "utf8",
 );
+const contentStyles = fs.readFileSync(
+  path.join(root, "extension", "content.css"),
+  "utf8",
+);
 
 function fixture(activeSection, duplicateCount = 6) {
   const identities = Array.from(
@@ -20,7 +24,7 @@ function fixture(activeSection, duplicateCount = 6) {
       </div>`,
   ).join("");
   return `<!doctype html>
-    <html><head><title>${activeSection} · AP Calculus AB</title></head><body>
+    <html><head><title>${activeSection} · AP Calculus AB</title><style>${contentStyles}</style></head><body>
       <div class="ic-app-crumbs"><ol class="ic-app-crumbs__crumbs">
         <li><a href="/courses/10585">AP Calculus AB</a></li>
         <li class="ic-app-crumbs__crumb--current">${activeSection}</li>
@@ -42,7 +46,7 @@ function fixture(activeSection, duplicateCount = 6) {
     </body></html>`;
 }
 
-async function runCase(browser, url, activeSection) {
+async function runCase(browser, url, activeSection, options = {}) {
   const page = await browser.newPage();
   await page.addInitScript(() => {
     const settings = {
@@ -76,9 +80,59 @@ async function runCase(browser, url, activeSection) {
       },
     };
   });
-  await page.route("https://canvas.test/**", (route) =>
-    route.fulfill({ contentType: "text/html", body: fixture(activeSection) }),
-  );
+  await page.route("https://canvas.test/**", (route) => {
+    const requestUrl = new URL(route.request().url());
+    if (options.apiFailure && requestUrl.pathname.startsWith("/api/v1/")) {
+      return route.fulfill({ status: 403, body: "Forbidden" });
+    }
+    if (requestUrl.pathname.endsWith("/api/v1/courses/10585/discussion_topics")) {
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: 51,
+            title: "Field lab moved",
+            message: "<p>Meet at the east entrance.</p>",
+            posted_at: "2026-08-31T13:00:00Z",
+            pinned: true,
+            read_state: "unread",
+            author: { display_name: "Dr. Test" },
+            html_url: "https://canvas.test/courses/10585/announcements/51",
+          },
+          {
+            id: 52,
+            title: "Week five resources",
+            message: "<p>The review guide is ready.</p>",
+            posted_at: "2026-08-30T13:00:00Z",
+            pinned: false,
+            read_state: "read",
+            author: { display_name: "Course Team" },
+            html_url: "https://canvas.test/courses/10585/announcements/52",
+          },
+        ]),
+      });
+    }
+    if (requestUrl.pathname.endsWith("/api/v1/courses/10585")) {
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: 10585,
+          name: "AP Calculus AB",
+          course_code: "AP CALC AB",
+          workflow_state: "available",
+          updated_at: "2026-08-31T13:00:00Z",
+          term: { name: "2026 ALL" },
+          teachers: [{ display_name: "Mrs. Kibler" }],
+          syllabus_body:
+            "<h2>Course overview</h2><p>Limits, derivatives, and integrals.</p><h2>Course policies</h2><p>Submit work through Canvas.</p>",
+        }),
+      });
+    }
+    return route.fulfill({
+      contentType: "text/html",
+      body: fixture(activeSection),
+    });
+  });
   await page.goto(url);
   await page.addScriptTag({ content: contentScript });
   await page.waitForTimeout(2600);
@@ -87,6 +141,17 @@ async function runCase(browser, url, activeSection) {
     window.dispatchEvent(new PageTransitionEvent("pageshow"));
   });
   await page.waitForTimeout(1900);
+
+  if (process.env.CFE_CAPTURE_DIR) {
+    fs.mkdirSync(process.env.CFE_CAPTURE_DIR, { recursive: true });
+    await page.screenshot({
+      path: path.join(
+        process.env.CFE_CAPTURE_DIR,
+        `${activeSection.toLowerCase()}-experience.png`,
+      ),
+      fullPage: true,
+    });
+  }
 
   const result = await page.evaluate(() => {
     const identities = [...document.querySelectorAll(".cfe-course-identity")];
@@ -105,6 +170,20 @@ async function runCase(browser, url, activeSection) {
       hasWrongHomeWidgets: Boolean(
         document.querySelector("#cfe-course-widget-board"),
       ),
+      dataExperience:
+        document.querySelector(".cfe-course-data-experience")?.getAttribute(
+          "data-cfe-experience",
+        ) || "",
+      nativeHidden: Boolean(
+        document.querySelector("#content > .cfe-native-course-hidden"),
+      ),
+      syllabusBody: document.querySelector(".cfe-syllabus-body")?.textContent,
+      announcementDetail: document.querySelector(
+        ".cfe-announcement-detail h2",
+      )?.textContent,
+      announcementRows: document.querySelectorAll(
+        ".cfe-announcement-row",
+      ).length,
     };
   });
   await page.close();
@@ -128,6 +207,9 @@ async function runCase(browser, url, activeSection) {
     assert.equal(syllabus.courseHome, false);
     assert.equal(syllabus.title, "Course Syllabus");
     assert.equal(syllabus.hasWrongHomeWidgets, false);
+    assert.equal(syllabus.dataExperience, "syllabus");
+    assert.equal(syllabus.nativeHidden, true);
+    assert.match(syllabus.syllabusBody, /Limits, derivatives/);
 
     const announcements = await runCase(
       browser,
@@ -138,6 +220,19 @@ async function runCase(browser, url, activeSection) {
     assert.equal(announcements.identityIsImmediatelyBeforeTabs, true);
     assert.equal(announcements.announcements, true);
     assert.equal(announcements.courseHome, false);
+    assert.equal(announcements.dataExperience, "announcements");
+    assert.equal(announcements.nativeHidden, true);
+    assert.equal(announcements.announcementDetail, "Field lab moved");
+    assert.equal(announcements.announcementRows, 2);
+
+    const fallback = await runCase(
+      browser,
+      "https://canvas.test/courses/10585",
+      "Syllabus",
+      { apiFailure: true },
+    );
+    assert.equal(fallback.dataExperience, "");
+    assert.equal(fallback.nativeHidden, false);
     console.log("Course adapter regression checks passed.");
   } finally {
     await browser.close();

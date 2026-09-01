@@ -24,6 +24,7 @@
   let globalNavObserver = null;
   let globalNavPaintFrame = null;
   let courseAdapterRetryTimers = [];
+  let courseExperienceRequestId = 0;
   let nonDashboardThemeQueued = false;
   let passiveRouteSyncBound = false;
   let routeWatcherIntervalId = null;
@@ -150,6 +151,8 @@
     const isDiscussionDetail = /^(discussion_topics|discussions)\/[^/]+(\/|$)/.test(
       courseTail,
     );
+    const isAnnouncementDetail =
+      isDiscussionDetail && /\bannouncement\b/.test(semanticText);
     const isMediaTool =
       isExternalTool &&
       /(panopto|studio|recordings?|media gallery|mediasite|kaltura|video library)/.test(
@@ -183,14 +186,17 @@
       isCourse: Boolean(courseMatch),
       isCourseHome: Boolean(isCourseRoot && !hasSemanticRootSection),
       isAssignmentDetail,
-      isDiscussionDetail,
+      isDiscussionDetail: isDiscussionDetail && !isAnnouncementDetail,
       isAnnouncements:
-        /^(announcements)(\/|$)/.test(courseTail) || rootSection.announcements,
+        /^(announcements)(\/|$)/.test(courseTail) ||
+        rootSection.announcements ||
+        isAnnouncementDetail,
       isAssignments:
         /^(assignments)(\/|$)/.test(courseTail) || rootSection.assignments,
       isDiscussions:
-        /^(discussion_topics|discussions)(\/|$)/.test(courseTail) ||
-        rootSection.discussions,
+        !isAnnouncementDetail &&
+        (/^(discussion_topics|discussions)(\/|$)/.test(courseTail) ||
+          rootSection.discussions),
       isFiles: /^(files)(\/|$)/.test(courseTail),
       isGrades:
         /^(grades|gradebook)(\/|$)/.test(courseTail) || rootSection.grades,
@@ -502,7 +508,360 @@
       });
   }
 
+  function sanitizeCanvasRichHtml(value) {
+    const template = document.createElement("template");
+    template.innerHTML = String(value || "");
+    template.content
+      .querySelectorAll("script, style, link, meta, object, embed, form")
+      .forEach((node) => node.remove());
+    template.content.querySelectorAll("*").forEach((node) => {
+      Array.from(node.attributes).forEach((attribute) => {
+        const name = attribute.name.toLowerCase();
+        const rawValue = String(attribute.value || "").trim();
+        if (name.startsWith("on") || name === "srcdoc") {
+          node.removeAttribute(attribute.name);
+          return;
+        }
+        if (
+          (name === "href" || name === "src" || name === "action") &&
+          /^(?:javascript|data\s*:\s*text\/html)/i.test(rawValue)
+        ) {
+          node.removeAttribute(attribute.name);
+        }
+      });
+    });
+    return template.innerHTML;
+  }
+
+  function formatCourseDate(value, options = {}) {
+    const date = new Date(value || "");
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString([], {
+      month: "short",
+      day: "numeric",
+      ...(options.includeYear ? { year: "numeric" } : {}),
+    });
+  }
+
+  function courseExperienceOriginals(content) {
+    return Array.from(content?.children || []).filter(
+      (node) => !node.classList.contains("cfe-course-data-experience"),
+    );
+  }
+
+  function removeCourseDataExperience() {
+    courseExperienceRequestId += 1;
+    document.querySelectorAll(".cfe-course-data-experience").forEach((node) =>
+      node.remove(),
+    );
+    document
+      .querySelectorAll(".cfe-native-course-hidden")
+      .forEach((node) => node.classList.remove("cfe-native-course-hidden"));
+    document.documentElement.classList.remove("cfe-data-experience-active");
+    document.body?.classList.remove("cfe-data-experience-active");
+  }
+
+  function activateCourseDataExperience(content, root) {
+    courseExperienceOriginals(content).forEach((node) =>
+      node.classList.add("cfe-native-course-hidden"),
+    );
+    content.appendChild(root);
+    document.documentElement.classList.add("cfe-data-experience-active");
+    document.body?.classList.add("cfe-data-experience-active");
+  }
+
+  function courseSectionLink(labelPattern) {
+    const links = Array.from(document.querySelectorAll("#section-tabs a"));
+    return links.find((link) =>
+      labelPattern.test(String(link.textContent || "").trim()),
+    );
+  }
+
+  function addDocumentHeadingAnchors(root) {
+    const headings = Array.from(root.querySelectorAll("h2, h3"));
+    return headings.slice(0, 8).map((heading, index) => {
+      if (!heading.id) heading.id = `cfe-syllabus-section-${index + 1}`;
+      return {
+        id: heading.id,
+        label: String(heading.textContent || "Section").replace(/\s+/g, " ").trim(),
+      };
+    });
+  }
+
+  function renderSyllabusExperience(course, courseName) {
+    const syllabusHtml = sanitizeCanvasRichHtml(course?.syllabus_body || "");
+    if (!syllabusHtml.trim()) return null;
+    const root = document.createElement("section");
+    root.className = "cfe-course-data-experience cfe-syllabus-experience";
+    root.dataset.cfeExperience = "syllabus";
+    const termName = String(course?.term?.name || "Current term");
+    const courseCode = String(course?.course_code || "Course");
+    const teachers = Array.isArray(course?.teachers) ? course.teachers : [];
+    const teacher = teachers[0] || null;
+    const updatedLabel = formatCourseDate(course?.updated_at, {
+      includeYear: true,
+    });
+    root.innerHTML = `
+      <header class="cfe-data-page-header">
+        <div class="cfe-data-page-copy">
+          <p class="cfe-data-eyebrow">Course information · ${escapeHtml(termName)}</p>
+          <h1>Course Syllabus</h1>
+          <p>${escapeHtml(courseCode)} · ${escapeHtml(courseName)}</p>
+        </div>
+        <div class="cfe-data-page-actions">
+          <button type="button" data-cfe-syllabus-print>Print</button>
+          <button type="button" class="is-primary" data-cfe-syllabus-pdf>Save PDF</button>
+        </div>
+      </header>
+      <div class="cfe-syllabus-grid">
+        <article class="cfe-syllabus-document">
+          <section class="cfe-syllabus-facts">
+            <div><span>Course</span><strong>${escapeHtml(courseName)}</strong><p>${escapeHtml(courseCode)}<br>${escapeHtml(termName)}</p></div>
+            <div><span>Instructor</span><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Course instructor")}</strong><p>${escapeHtml(teacher?.email || "Contact through Canvas Inbox")}</p></div>
+          </section>
+          <div class="cfe-syllabus-body user_content">${syllabusHtml}</div>
+        </article>
+        <aside class="cfe-syllabus-utilities" aria-label="Syllabus utilities">
+          <section><div class="cfe-utility-heading"><h2>Course status</h2><span class="cfe-live-status"><i></i>${course?.workflow_state === "available" ? "Live" : "Available"}</span></div><p>Published in Canvas${updatedLabel ? `<br>Updated ${escapeHtml(updatedLabel)}` : ""}</p></section>
+          <section class="cfe-on-this-page"><h2>On this page</h2><nav></nav></section>
+          <section class="cfe-course-tools"><h2>Course tools</h2><nav></nav></section>
+        </aside>
+      </div>`;
+    const body = root.querySelector(".cfe-syllabus-body");
+    const anchors = addDocumentHeadingAnchors(body);
+    const onPage = root.querySelector(".cfe-on-this-page nav");
+    anchors.forEach(({ id, label }) => {
+      const link = document.createElement("a");
+      link.href = `#${id}`;
+      link.textContent = label;
+      onPage?.appendChild(link);
+    });
+    if (!anchors.length) root.querySelector(".cfe-on-this-page")?.remove();
+    const tools = root.querySelector(".cfe-course-tools nav");
+    [
+      ["Modules", /modules/i],
+      ["Assignments", /assignments/i],
+      ["Grades", /grades/i],
+    ].forEach(([label, pattern]) => {
+      const nativeLink = courseSectionLink(pattern);
+      if (!nativeLink?.href) return;
+      const link = document.createElement("a");
+      link.href = nativeLink.href;
+      link.textContent = label;
+      tools?.appendChild(link);
+    });
+    root
+      .querySelectorAll("[data-cfe-syllabus-print], [data-cfe-syllabus-pdf]")
+      .forEach((button) => button.addEventListener("click", () => window.print()));
+    return root;
+  }
+
+  function announcementAuthorName(topic) {
+    return String(
+      topic?.author?.display_name ||
+        topic?.author?.name ||
+        topic?.user_name ||
+        "Course team",
+    );
+  }
+
+  function announcementInitials(name) {
+    return String(name || "Course team")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("");
+  }
+
+  function renderAnnouncementList(topics, selectedId, filterText = "", mode = "all") {
+    const normalizedFilter = String(filterText || "").trim().toLowerCase();
+    return topics
+      .filter((topic) => {
+        if (mode === "unread" && topic?.read_state === "read") return false;
+        if (mode === "pinned" && !topic?.pinned) return false;
+        if (!normalizedFilter) return true;
+        return `${topic?.title || ""} ${announcementAuthorName(topic)}`
+          .toLowerCase()
+          .includes(normalizedFilter);
+      })
+      .map((topic) => {
+        const author = announcementAuthorName(topic);
+        const active = String(topic?.id) === String(selectedId);
+        const unread = topic?.read_state !== "read";
+        const excerpt = String(topic?.message || "")
+          .replace(/<[^>]*>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 120);
+        return `<button type="button" class="cfe-announcement-row${active ? " is-active" : ""}" data-cfe-announcement-id="${escapeAttr(String(topic?.id || ""))}">
+          <span class="cfe-announcement-row-icon">${topic?.pinned ? "●" : "○"}</span>
+          <span class="cfe-announcement-row-copy"><strong>${escapeHtml(topic?.title || "Announcement")}</strong><small>${escapeHtml(excerpt || "Open to read this announcement.")}</small><em>${escapeHtml(author)} · ${escapeHtml(formatCourseDate(topic?.posted_at || topic?.created_at))}</em></span>
+          ${unread ? '<i class="cfe-unread-dot" aria-label="Unread"></i>' : ""}
+        </button>`;
+      })
+      .join("");
+  }
+
+  function announcementDetailHtml(topic) {
+    if (!topic) {
+      return '<div class="cfe-announcement-empty"><h2>No announcements found</h2><p>Try another search or filter.</p></div>';
+    }
+    const author = announcementAuthorName(topic);
+    const posted = formatCourseDate(topic?.posted_at || topic?.created_at, {
+      includeYear: true,
+    });
+    return `<article class="cfe-announcement-detail">
+      <header><div class="cfe-announcement-badges">${topic?.pinned ? "<span>Pinned</span>" : ""}${topic?.read_state !== "read" ? "<span>Unread</span>" : ""}</div><h2>${escapeHtml(topic?.title || "Announcement")}</h2><div class="cfe-announcement-author"><span>${escapeHtml(announcementInitials(author))}</span><p><strong>${escapeHtml(author)}</strong><small>Posted ${escapeHtml(posted || "in Canvas")}</small></p></div></header>
+      <div class="cfe-announcement-message user_content">${sanitizeCanvasRichHtml(topic?.message || "")}</div>
+      <footer><a href="${escapeAttr(sanitizeHref(topic?.html_url || window.location.href))}">Open in Canvas</a></footer>
+    </article>`;
+  }
+
+  function renderAnnouncementsExperience(topics, courseName, selectedId) {
+    const safeTopics = Array.isArray(topics) ? topics.filter(Boolean) : [];
+    let activeId = String(
+      safeTopics.find((topic) => String(topic.id) === String(selectedId))?.id ||
+        safeTopics.find((topic) => topic?.read_state !== "read")?.id ||
+        safeTopics[0]?.id ||
+        "",
+    );
+    let filterText = "";
+    let filterMode = "all";
+    const root = document.createElement("section");
+    root.className = "cfe-course-data-experience cfe-announcements-experience";
+    root.dataset.cfeExperience = "announcements";
+    const createLink = Array.from(document.querySelectorAll("a[href]")).find(
+      (link) => /\/announcements\/new(?:\?|$)/.test(link.getAttribute("href") || ""),
+    );
+    root.innerHTML = `
+      <header class="cfe-data-page-header">
+        <div class="cfe-data-page-copy"><p class="cfe-data-eyebrow">Course communication</p><h1>Announcements</h1><p>Updates and notices from ${escapeHtml(courseName)}.</p></div>
+        ${createLink?.href ? `<div class="cfe-data-page-actions"><a class="is-primary" href="${escapeAttr(createLink.href)}">+ Announcement</a></div>` : ""}
+      </header>
+      <div class="cfe-announcement-controls"><label><span class="screenreader-only">Search announcements</span><input type="search" placeholder="Search announcements"></label><button type="button" data-cfe-announcement-filter>All announcements</button></div>
+      <div class="cfe-announcements-grid">
+        <section class="cfe-announcement-list" aria-label="Announcement list"><header><h2>Recent announcements</h2><span>${safeTopics.length} total</span></header><div data-cfe-announcement-list></div></section>
+        <div data-cfe-announcement-detail></div>
+      </div>`;
+    const list = root.querySelector("[data-cfe-announcement-list]");
+    const detail = root.querySelector("[data-cfe-announcement-detail]");
+    const draw = () => {
+      const drawRows = () =>
+        renderAnnouncementList(
+          safeTopics,
+          activeId,
+          filterText,
+          filterMode,
+        );
+      if (list) {
+        list.innerHTML = drawRows();
+      }
+      const visibleIds = Array.from(
+        list?.querySelectorAll("[data-cfe-announcement-id]") || [],
+      ).map((node) => node.getAttribute("data-cfe-announcement-id"));
+      if (!visibleIds.includes(activeId)) {
+        activeId = visibleIds[0] || "";
+        if (list) list.innerHTML = drawRows();
+      }
+      if (detail) {
+        detail.innerHTML = announcementDetailHtml(
+          safeTopics.find((topic) => String(topic.id) === activeId),
+        );
+      }
+      list?.querySelectorAll("[data-cfe-announcement-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+          activeId = button.getAttribute("data-cfe-announcement-id") || "";
+          draw();
+        });
+      });
+    };
+    root.querySelector("input[type='search']")?.addEventListener("input", (event) => {
+      filterText = event.target.value || "";
+      draw();
+    });
+    root
+      .querySelector("[data-cfe-announcement-filter]")
+      ?.addEventListener("click", (event) => {
+        filterMode =
+          filterMode === "all" ? "unread" : filterMode === "unread" ? "pinned" : "all";
+        event.currentTarget.textContent =
+          filterMode === "all"
+            ? "All announcements"
+            : filterMode === "unread"
+              ? "Unread"
+              : "Pinned";
+        draw();
+      });
+    draw();
+    return root;
+  }
+
+  async function ensureCourseDataExperience(courseName) {
+    const path = window.location.pathname || "";
+    const route = getCourseRouteContext(path);
+    if (!route.isSyllabus && !route.isAnnouncements) {
+      removeCourseDataExperience();
+      return;
+    }
+    const courseId = getCourseIdFromPath(path);
+    const content = document.querySelector("#content, .ic-Layout-contentMain");
+    if (!courseId || !content) return;
+    const experience = route.isSyllabus ? "syllabus" : "announcements";
+    const existing = document.querySelector(
+      `.cfe-course-data-experience[data-cfe-experience="${experience}"]`,
+    );
+    if (existing) return;
+    removeCourseDataExperience();
+    const requestId = ++courseExperienceRequestId;
+    const loading = document.createElement("section");
+    loading.className = "cfe-course-data-experience cfe-course-data-loading";
+    loading.dataset.cfeExperience = experience;
+    loading.innerHTML = '<div><i></i><span>Preparing your course workspace…</span></div>';
+    activateCourseDataExperience(content, loading);
+    try {
+      let root = null;
+      if (experience === "syllabus") {
+        const url = new URL(`${window.location.origin}/api/v1/courses/${courseId}`);
+        ["syllabus_body", "term", "teachers", "sections"].forEach((include) =>
+          url.searchParams.append("include[]", include),
+        );
+        const response = await fetch(url, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        root = renderSyllabusExperience(await response.json(), courseName);
+      } else {
+        const url = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/discussion_topics`,
+        );
+        url.searchParams.set("only_announcements", "true");
+        url.searchParams.set("per_page", "50");
+        const response = await fetch(url, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const selectedId = path.match(/\/(?:announcements|discussion_topics)\/(\d+)/)?.[1] || "";
+        root = renderAnnouncementsExperience(
+          await response.json(),
+          courseName,
+          selectedId,
+        );
+      }
+      if (requestId !== courseExperienceRequestId || !root) {
+        if (requestId === courseExperienceRequestId) removeCourseDataExperience();
+        return;
+      }
+      loading.replaceWith(root);
+    } catch (error) {
+      if (requestId === courseExperienceRequestId) removeCourseDataExperience();
+    }
+  }
+
   function removeCourseDesignAdapter() {
+    removeCourseDataExperience();
     document
       .querySelectorAll(".cfe-course-page-copy--injected")
       .forEach((wrapper) => {
@@ -581,6 +940,7 @@
     }
     ensureCoursePageHeader(courseName);
     ensureExternalToolToolbar();
+    void ensureCourseDataExperience(courseName);
   }
 
   function clearCourseAdapterRetries() {
