@@ -146,6 +146,10 @@
       courseMatch &&
         /^(external_tools|external_content|lti)(\/|$)/.test(courseTail),
     );
+    const isAssignmentDetail = /^assignments\/[^/]+(\/|$)/.test(courseTail);
+    const isDiscussionDetail = /^(discussion_topics|discussions)\/[^/]+(\/|$)/.test(
+      courseTail,
+    );
     const isMediaTool =
       isExternalTool &&
       /(panopto|studio|recordings?|media gallery|mediasite|kaltura|video library)/.test(
@@ -160,6 +164,8 @@
     return {
       isCourse: Boolean(courseMatch),
       isCourseHome: Boolean(courseMatch && !courseTail),
+      isAssignmentDetail,
+      isDiscussionDetail,
       isAnnouncements: /^(announcements)(\/|$)/.test(courseTail),
       isAssignments: /^(assignments)(\/|$)/.test(courseTail),
       isDiscussions: /^(discussion_topics|discussions)(\/|$)/.test(courseTail),
@@ -185,11 +191,13 @@
       "cfe-page-course-home": course.isCourseHome,
       "cfe-page-modules": course.isModules,
       "cfe-page-assignments": course.isAssignments,
+      "cfe-page-assignment-detail": course.isAssignmentDetail,
       "cfe-page-grades":
         course.isGrades || /\/(grades|gradebook)(\/|$)/.test(path),
       "cfe-page-discussions":
         course.isDiscussions ||
         /\/(discussion_topics|discussions)(\/|$)/.test(path),
+      "cfe-page-discussion-detail": course.isDiscussionDetail,
       "cfe-page-announcements": course.isAnnouncements,
       "cfe-page-pages": course.isPages,
       "cfe-page-files": course.isFiles,
@@ -242,7 +250,7 @@
     },
     "cfe-page-modules": {
       eyebrow: "Course content",
-      description: "Move through readings, activities, and assessments in order.",
+      description: "Organize readings, activities, and assessments by week.",
     },
     "cfe-page-assignments": {
       eyebrow: "Course content",
