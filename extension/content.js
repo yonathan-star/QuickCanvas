@@ -369,7 +369,9 @@
       eyebrow.className = "cfe-course-page-eyebrow";
       title.before(eyebrow);
     }
-    eyebrow.textContent = presentation.eyebrow;
+    if (eyebrow.textContent !== presentation.eyebrow) {
+      eyebrow.textContent = presentation.eyebrow;
+    }
     let description = copy.querySelector(
       ":scope > .cfe-course-page-description",
     );
@@ -378,7 +380,9 @@
       description.className = "cfe-course-page-description";
       title.after(description);
     }
-    description.textContent = presentation.description;
+    if (description.textContent !== presentation.description) {
+      description.textContent = presentation.description;
+    }
   }
 
   function courseToolFrame() {
@@ -394,7 +398,10 @@
       frame?.closest(
         "#tool_content, #external_tool, .tool_content_wrapper, .external-tool-content, [data-testid*='external-tool']",
       ) || frame;
-    if (!host || host.previousElementSibling?.classList.contains("cfe-tool-toolbar")) {
+    const existingToolbar = host?.parentElement?.querySelector(
+      ":scope > .cfe-tool-toolbar",
+    );
+    if (!host || existingToolbar) {
       return;
     }
     const toolName =
@@ -492,7 +499,9 @@
         sectionTabs.before(identity);
       } else {
         const title = identity.querySelector(".cfe-course-identity-title");
-        if (title) title.textContent = courseName;
+        if (title && title.textContent !== courseName) {
+          title.textContent = courseName;
+        }
       }
     }
     ensureCoursePageHeader(courseName);
@@ -1217,7 +1226,9 @@
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["class", "style", "aria-current"],
+      // Do not observe `style`: the paint functions below intentionally write
+      // inline colors, so observing those writes creates a feedback loop.
+      attributeFilter: ["class", "aria-current"],
     });
   }
 
@@ -1259,7 +1270,7 @@
     if (styleTag) {
       styleTag.remove();
     }
-    ensureCourseDesignAdapter();
+    removeCourseDesignAdapter();
   }
 
   function applyPopupTheme(theme) {
