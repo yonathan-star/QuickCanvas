@@ -158,13 +158,6 @@ async function runCase(browser, url, activeSection, options = {}) {
   });
   await page.waitForTimeout(1900);
 
-  if (activeSection === "Modules") {
-    await page.locator("[data-cfe-module-toggle]").first().click();
-  }
-  if (["Assignments", "Grades", "People", "Files", "Quizzes"].includes(activeSection)) {
-    await page.locator("[data-cfe-collection-search]").fill("definitely-no-match");
-  }
-
   if (process.env.CFE_CAPTURE_DIR) {
     fs.mkdirSync(process.env.CFE_CAPTURE_DIR, { recursive: true });
     await page.screenshot({
@@ -174,6 +167,14 @@ async function runCase(browser, url, activeSection, options = {}) {
       ),
       fullPage: true,
     });
+  }
+
+  if (activeSection === "Modules") {
+    await page.locator("[data-cfe-module-toggle]").first().click();
+  }
+  if (["Assignments", "Grades", "People", "Quizzes"].includes(activeSection)) {
+    const search = page.locator("[data-cfe-collection-search]");
+    if (await search.count()) await search.fill("definitely-no-match");
   }
 
   const result = await page.evaluate(() => {
@@ -220,6 +221,7 @@ async function runCase(browser, url, activeSection, options = {}) {
           .every((row) => row.hidden),
       horizontalOverflow:
         document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      bodyClasses: document.body.className,
     };
   });
   await page.close();
@@ -261,6 +263,16 @@ async function runCase(browser, url, activeSection, options = {}) {
     assert.equal(announcements.announcementDetail, "Field lab moved");
     assert.equal(announcements.announcementRows, 2);
 
+    const courseHome = await runCase(
+      browser,
+      "https://canvas.test/courses/10585",
+      "Home",
+    );
+    assert.equal(courseHome.dataExperience, "course-home");
+    assert.equal(courseHome.nativeHidden, true);
+    assert.equal(courseHome.experienceTitle, "AP Calculus AB");
+    assert.equal(courseHome.horizontalOverflow, false);
+
     const routeCases = [
       ["modules", "Modules", "Modules"],
       ["assignments", "Assignments", "Assignments"],
@@ -268,7 +280,7 @@ async function runCase(browser, url, activeSection, options = {}) {
       ["grades", "Grades", "Grades"],
       ["users", "People", "People"],
       ["pages", "Pages", "Pages & Files"],
-      ["files", "Files", "Course Files"],
+      ["files", "Files", "Pages & Files"],
       ["quizzes", "Quizzes", "Quizzes & Assessments"],
     ];
     for (const [pathName, section, title] of routeCases) {
@@ -286,7 +298,7 @@ async function runCase(browser, url, activeSection, options = {}) {
       if (section === "Modules") {
         assert.equal(current.moduleCollapsed, true, "Modules: collapse control failed");
       }
-      if (["Assignments", "Grades", "People", "Files", "Quizzes"].includes(section)) {
+      if (["Assignments", "Grades", "People", "Quizzes"].includes(section)) {
         assert.equal(current.searchFiltered, true, `${section}: search control failed`);
       }
     }
@@ -299,6 +311,24 @@ async function runCase(browser, url, activeSection, options = {}) {
     );
     assert.equal(mobile.dataExperience, "pages");
     assert.equal(mobile.horizontalOverflow, false, "Pages: mobile horizontal overflow");
+
+    const nativeCases = [
+      ["assignments/7", "Assignments", "cfe-page-assignment-detail"],
+      ["discussion_topics/51", "Discussions", "cfe-page-discussion-detail"],
+      ["quizzes/10", "Quizzes", "cfe-quiz-page"],
+      ["external_tools/65", "Panopto Recordings", "cfe-page-media-tool"],
+    ];
+    for (const [pathName, section, expectedClass] of nativeCases) {
+      const current = await runCase(
+        browser,
+        `https://canvas.test/courses/10585/${pathName}`,
+        section,
+      );
+      assert.equal(current.dataExperience, "", `${section}: native workflow was replaced`);
+      assert.equal(current.nativeHidden, false, `${section}: native workflow was hidden`);
+      assert.match(current.bodyClasses, new RegExp(`(?:^|\\s)${expectedClass}(?:\\s|$)`));
+      assert.equal(current.horizontalOverflow, false, `${section}: horizontal overflow`);
+    }
 
     const fallback = await runCase(
       browser,

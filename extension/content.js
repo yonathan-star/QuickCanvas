@@ -680,6 +680,8 @@
       .filter((topic) => {
         if (mode === "unread" && topic?.read_state === "read") return false;
         if (mode === "pinned" && !topic?.pinned) return false;
+        if (mode === "graded" && !topic?.assignment) return false;
+        if (mode === "locked" && !topic?.locked) return false;
         if (!normalizedFilter) return true;
         return `${topic?.title || ""} ${announcementAuthorName(topic)}`
           .toLowerCase()
@@ -730,6 +732,7 @@
     );
     let filterText = "";
     let filterMode = "all";
+    let sortMode = "recent";
     const root = document.createElement("section");
     root.className = `cfe-course-data-experience cfe-${plural}-experience`;
     root.dataset.cfeExperience = plural;
@@ -744,7 +747,7 @@
         <div class="cfe-data-page-copy"><p class="cfe-data-eyebrow">${isDiscussion ? "Course conversations" : "Course communication"}</p><h1>${isDiscussion ? "Discussions" : "Announcements"}</h1><p>${isDiscussion ? `Read closely and contribute thoughtfully in ${escapeHtml(courseName)}.` : `Updates and notices from ${escapeHtml(courseName)}.`}</p></div>
         ${createLink?.href ? `<div class="cfe-data-page-actions"><a class="is-primary" href="${escapeAttr(createLink.href)}">+ ${isDiscussion ? "Discussion" : "Announcement"}</a></div>` : ""}
       </header>
-      <div class="cfe-announcement-controls"><label><span class="screenreader-only">Search ${plural}</span><input type="search" placeholder="Search ${plural}"></label><button type="button" data-cfe-announcement-filter>All ${plural}</button></div>
+      <div class="cfe-announcement-controls${isDiscussion ? " is-discussion" : ""}"><label><span class="screenreader-only">Search ${plural}</span><input type="search" placeholder="${isDiscussion ? "Search topics or authors" : `Search ${plural}`}"></label>${isDiscussion ? `<select data-cfe-announcement-filter aria-label="Filter discussions"><option value="all">All discussions</option><option value="unread">Unread</option><option value="graded">Graded</option><option value="locked">Locked</option></select><select data-cfe-discussion-sort aria-label="Sort discussions"><option value="recent">Recent activity</option><option value="due">Due date</option><option value="title">Topic title</option></select>` : `<button type="button" data-cfe-announcement-filter>All ${plural}</button>`}</div>
       <div class="cfe-announcements-grid">
         <section class="cfe-announcement-list" aria-label="${isDiscussion ? "Discussion topic" : "Announcement"} list"><header><h2>${isDiscussion ? "Discussion topics" : "Recent announcements"}</h2><span>${safeTopics.length} total</span></header><div data-cfe-announcement-list></div></section>
         <div data-cfe-announcement-detail></div>
@@ -752,9 +755,14 @@
     const list = root.querySelector("[data-cfe-announcement-list]");
     const detail = root.querySelector("[data-cfe-announcement-detail]");
     const draw = () => {
+      const orderedTopics = [...safeTopics].sort((a, b) => {
+        if (sortMode === "title") return String(a?.title || "").localeCompare(String(b?.title || ""));
+        if (sortMode === "due") return new Date(a?.assignment?.due_at || 0) - new Date(b?.assignment?.due_at || 0);
+        return new Date(b?.last_reply_at || b?.posted_at || b?.created_at || 0) - new Date(a?.last_reply_at || a?.posted_at || a?.created_at || 0);
+      });
       const drawRows = () =>
         renderAnnouncementList(
-          safeTopics,
+          orderedTopics,
           activeId,
           filterText,
           filterMode,
@@ -785,9 +793,18 @@
       filterText = event.target.value || "";
       draw();
     });
-    root
-      .querySelector("[data-cfe-announcement-filter]")
-      ?.addEventListener("click", (event) => {
+    const filterControl = root.querySelector("[data-cfe-announcement-filter]");
+    if (isDiscussion) {
+      filterControl?.addEventListener("change", (event) => {
+        filterMode = event.currentTarget.value || "all";
+        draw();
+      });
+      root.querySelector("[data-cfe-discussion-sort]")?.addEventListener("change", (event) => {
+        sortMode = event.currentTarget.value || "recent";
+        draw();
+      });
+    } else {
+      filterControl?.addEventListener("click", (event) => {
         filterMode =
           filterMode === "all" ? "unread" : filterMode === "unread" ? "pinned" : "all";
         event.currentTarget.textContent =
@@ -798,6 +815,7 @@
               : "Pinned";
         draw();
       });
+    }
     draw();
     return root;
   }
@@ -805,6 +823,7 @@
   function courseExperienceKind(route) {
     if (route.isSyllabus) return "syllabus";
     if (route.isAnnouncements) return "announcements";
+    if (route.isCourseHome) return "course-home";
     if (route.isModules) return "modules";
     if (route.isAssignments && !route.isAssignmentDetail) return "assignments";
     if (route.isDiscussions && !route.isDiscussionDetail) return "discussions";
@@ -835,6 +854,29 @@
       <header class="cfe-data-page-header">
         <div class="cfe-data-page-copy"><p class="cfe-data-eyebrow">${escapeHtml(eyebrow)}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></div>
       </header>`;
+    return root;
+  }
+
+  function renderCourseHomeExperience(course, modules, assignments, announcements, courseName, courseId) {
+    const safeModules = Array.isArray(modules) ? modules.filter(Boolean) : [];
+    const safeAssignments = (Array.isArray(assignments) ? assignments : [])
+      .filter(Boolean)
+      .sort((a, b) => new Date(a?.due_at || 0) - new Date(b?.due_at || 0));
+    const safeAnnouncements = (Array.isArray(announcements) ? announcements : []).filter(Boolean);
+    const teacher = (Array.isArray(course?.teachers) ? course.teachers : [])[0];
+    const allItems = safeModules.flatMap((module) => module?.items || []);
+    const required = allItems.filter((item) => item?.completion_requirement);
+    const completed = required.filter((item) => item?.completion_requirement?.completed).length;
+    const progress = required.length ? Math.round((completed / required.length) * 100) : 0;
+    const root = document.createElement("section");
+    root.className = "cfe-course-data-experience cfe-course-home-experience";
+    root.dataset.cfeExperience = "course-home";
+    root.innerHTML = `<div class="cfe-course-home-grid"><div class="cfe-course-home-main"><header class="cfe-course-home-header"><div><p class="cfe-data-eyebrow">${escapeHtml(course?.course_code || course?.term?.name || "Current course")}</p><h1>${escapeHtml(course?.name || courseName)}</h1><p>${escapeHtml([course?.term?.name, teacher?.display_name || teacher?.name].filter(Boolean).join(" · ") || "Your Canvas course workspace")}</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}"><span>Continue course</span><b aria-hidden="true">→</b></a></header>
+      <section class="cfe-course-welcome"><span>✓</span><div><h2>${safeModules[0]?.name ? `Continue ${escapeHtml(safeModules[0].name)}` : "Welcome to your course"}</h2><p>${safeModules[0]?.items?.length ? `${safeModules[0].items.length} learning items are available in this module.` : "Course materials, announcements, and upcoming work are organized below."}</p><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}">Open course modules →</a></div></section>
+      <section class="cfe-course-home-card"><header><div><h2>Recent announcements</h2><p>Updates from your instructor</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/announcements`)}">View all</a></header>${safeAnnouncements.slice(0, 3).map((topic) => `<a class="cfe-course-home-row" href="${escapeAttr(sanitizeHref(topic?.html_url || `${window.location.origin}/courses/${courseId}/announcements`))}"><i class="${topic?.read_state === "read" ? "" : "is-unread"}"></i><div><strong>${escapeHtml(topic?.title || "Course announcement")}</strong><p>${escapeHtml(String(topic?.message || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 150))}</p><small>${escapeHtml(announcementAuthorName(topic))} · ${escapeHtml(formatCourseDate(topic?.posted_at || topic?.created_at))}</small></div></a>`).join("") || '<div class="cfe-collection-empty">No recent announcements.</div>'}</section>
+      <section class="cfe-course-home-card"><header><div><h2>Due soon</h2><p>Your upcoming course work</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/assignments`)}">All assignments</a></header>${safeAssignments.slice(0, 4).map((assignment) => { const status = assignmentStatus(assignment); return `<a class="cfe-course-home-row is-assignment" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><span>${moduleItemIcon((assignment?.submission_types || [])[0] || "assignment")}</span><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><p>${escapeHtml(String(assignment?.points_possible ?? "—"))} points</p></div><em class="is-${status.tone}">${status.label === "Not submitted" ? escapeHtml(formatCourseDateTime(assignment?.due_at)) : escapeHtml(status.label)}</em></a>`; }).join("") || '<div class="cfe-collection-empty">No upcoming assignments.</div>'}</section>
+      <section class="cfe-course-quick-links"><h2>Quick links</h2><div>${[["Modules", "modules", "▤"], ["Grades", "grades", "▥"], ["Syllabus", "assignments/syllabus", "≡"], ["People", "users", "○"]].map(([label, route, icon]) => `<a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/${route}`)}"><span>${icon}</span>${label}</a>`).join("")}</div></section></div>
+      <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${progress}%</strong></header><div class="cfe-progress-track"><i style="width:${progress}%"></i></div><p>${completed} of ${required.length} required items complete</p><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}">View progress</a></section><section><header><h3>Course contacts</h3></header>${teacher ? `<div class="cfe-contact"><i>${escapeHtml(announcementInitials(teacher?.display_name || teacher?.name || "Instructor"))}</i><div><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Instructor")}</strong><small>Course instructor</small></div></div>` : "<p>Instructor information is available in Canvas.</p>"}</section><section><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/calendar?context_codes[]=course_${courseId}`)}">Course calendar</a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/files`)}">Course files</a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades`)}">Student grades</a></section></aside></div>`;
     return root;
   }
 
@@ -872,7 +914,7 @@
     root.insertAdjacentHTML(
       "beforeend",
       `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search modules</span><input data-cfe-collection-search type="search" placeholder="Search modules and items"></label><span>${safeModules.length} modules</span></div>
-      <div class="cfe-module-list">${safeModules
+      <div class="cfe-module-workspace"><div class="cfe-module-list">${safeModules
         .map((module, moduleIndex) => {
           const items = Array.isArray(module?.items) ? module.items : [];
           const completed = items.filter(
@@ -883,7 +925,8 @@
             <div data-cfe-module-items>${items.length ? items.map((item) => `<a class="cfe-module-item" data-cfe-collection-row href="${escapeAttr(sanitizeHref(item?.html_url || item?.url || "#"))}"><span>${moduleItemIcon(item?.type)}</span><div><strong>${escapeHtml(item?.title || "Module item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></div><em>${item?.completion_requirement?.completed ? "Completed" : item?.completion_requirement ? "To do" : ""}</em></a>`).join("") : '<div class="cfe-collection-empty">No items in this module.</div>'}</div>
           </section>`;
         })
-        .join("") || '<div class="cfe-collection-empty">No modules are available yet.</div>'}</div>`,
+        .join("") || '<div class="cfe-collection-empty">No modules are available yet.</div>'}</div>
+        <aside class="cfe-course-context-panel"><section><header><h3>Course status</h3><span class="is-live">Live</span></header><p>${safeModules.length} published learning modules</p><div class="cfe-progress-track"><i style="width:${safeModules.length ? Math.round((safeModules.filter((module) => module?.state === "completed").length / safeModules.length) * 100) : 0}%"></i></div></section><section><header><h3>To do</h3><span>${safeModules.flatMap((module) => module?.items || []).filter((item) => item?.completion_requirement && !item.completion_requirement.completed).length}</span></header>${safeModules.flatMap((module) => module?.items || []).filter((item) => item?.completion_requirement && !item.completion_requirement.completed).slice(0, 3).map((item) => `<a href="${escapeAttr(sanitizeHref(item?.html_url || "#"))}"><strong>${escapeHtml(item?.title || "Course item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></a>`).join("") || "<p>You're caught up.</p>"}</section><section><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}`)}">Course home</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/grades`)}">View grades</a></section></aside></div>`,
     );
     root.querySelectorAll("[data-cfe-module-toggle]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -926,6 +969,15 @@
     });
   }
 
+  function assignmentAvailability(assignment) {
+    const unlock = formatCourseDate(assignment?.unlock_at);
+    const lock = formatCourseDate(assignment?.lock_at);
+    if (unlock && lock) return `${unlock}–${lock}`;
+    if (lock) return `Until ${lock}`;
+    if (unlock) return `From ${unlock}`;
+    return "Always available";
+  }
+
   function renderAssignmentsExperience(assignments, groups, courseName) {
     const safeAssignments = Array.isArray(assignments)
       ? assignments.filter(Boolean)
@@ -950,22 +1002,35 @@
     });
     root.insertAdjacentHTML(
       "beforeend",
-      `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search assignments</span><input data-cfe-collection-search type="search" placeholder="Search assignments"></label><span>${safeAssignments.length} assignments</span></div>
+      `<div class="cfe-collection-controls cfe-assignment-controls"><label><span class="screenreader-only">Search assignments</span><input data-cfe-collection-search type="search" placeholder="Search assignments"></label><div role="group" aria-label="Filter assignments"><button class="is-active" type="button" data-cfe-assignment-filter="all">All assignments</button><button type="button" data-cfe-assignment-filter="upcoming">Upcoming</button><button type="button" data-cfe-assignment-filter="past">Past</button></div></div>
       <div class="cfe-assignment-groups">${Array.from(grouped.entries())
-        .map(([groupId, items]) => `<section class="cfe-assignment-group"><header><div><h2>${escapeHtml(groupNames.get(groupId) || "Assignments")}</h2><p>${items.length} assignments · ${items.reduce((sum, item) => sum + Number(item?.points_possible || 0), 0)} points</p></div></header><div class="cfe-assignment-columns"><span>Assignment</span><span>Due</span><span>Points</span><span>Status</span></div>${items.map((assignment) => {
+        .map(([groupId, items]) => `<section class="cfe-assignment-group"><header><div><h2>${escapeHtml(groupNames.get(groupId) || "Assignments")}</h2><p>${items.length} assignments · ${items.reduce((sum, item) => sum + Number(item?.points_possible || 0), 0)} points</p></div></header><div class="cfe-assignment-columns"><span>Assignment</span><span>Due</span><span>Availability</span><span>Points</span><span>Status</span></div>${items.map((assignment) => {
           const status = assignmentStatus(assignment);
+          const dueTime = new Date(assignment?.due_at || "").getTime();
+          const timing = Number.isFinite(dueTime) && dueTime < Date.now() ? "past" : "upcoming";
           const submissionTypes = Array.isArray(assignment?.submission_types)
             ? assignment.submission_types.join(", ").replaceAll("_", " ")
             : "Course work";
-          return `<a class="cfe-assignment-row" data-cfe-collection-row href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(submissionTypes)}</small></div><span>${escapeHtml(formatCourseDateTime(assignment?.due_at))}</span><span>${escapeHtml(String(assignment?.points_possible ?? "—"))}</span><em class="is-${status.tone}">${escapeHtml(status.label)}</em></a>`;
+          return `<a class="cfe-assignment-row" data-cfe-collection-row data-cfe-assignment-timing="${timing}" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(submissionTypes)}</small></div><span>${escapeHtml(formatCourseDateTime(assignment?.due_at))}</span><span>${escapeHtml(assignmentAvailability(assignment))}</span><span>${escapeHtml(String(assignment?.points_possible ?? "—"))}</span><em class="is-${status.tone}">${escapeHtml(status.label)}</em></a>`;
         }).join("")}</section>`)
         .join("") || '<div class="cfe-collection-empty">No assignments are available yet.</div>'}</div>`,
     );
     bindCollectionSearch(root, "[data-cfe-collection-row]");
+    root.querySelectorAll("[data-cfe-assignment-filter]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const mode = button.getAttribute("data-cfe-assignment-filter") || "all";
+        root.querySelectorAll("[data-cfe-assignment-filter]").forEach((item) =>
+          item.classList.toggle("is-active", item === button),
+        );
+        root.querySelectorAll("[data-cfe-assignment-timing]").forEach((row) => {
+          row.hidden = mode !== "all" && row.getAttribute("data-cfe-assignment-timing") !== mode;
+        });
+      });
+    });
     return root;
   }
 
-  function renderGradesExperience(assignments, courseName) {
+  function renderGradesExperience(assignments, groups, courseName) {
     const rows = (Array.isArray(assignments) ? assignments : []).filter(Boolean);
     const scored = rows.filter((item) => Number.isFinite(Number(item?.submission?.score)));
     const earned = scored.reduce(
@@ -986,12 +1051,13 @@
     root.insertAdjacentHTML(
       "beforeend",
       `<section class="cfe-grade-summary"><div><span>Current total</span><strong>${percent === null ? "—" : `${percent}%`}</strong><p>Based on graded work</p></div><div><span>Points earned</span><strong>${earned.toFixed(1)} / ${possible.toFixed(1)}</strong><p>${scored.length} graded assignments</p></div></section>
-      <div class="cfe-collection-controls"><label><span class="screenreader-only">Search grades</span><input data-cfe-collection-search type="search" placeholder="Search graded work"></label><span>${rows.length} items</span></div>
+      <div class="cfe-grade-filters"><label><span>Grading period</span><select><option>Current grading period</option></select></label><label><span>Assignment group</span><select><option>All assignment groups</option>${(Array.isArray(groups) ? groups : []).map((group) => `<option>${escapeHtml(group?.name || "Assignments")}</option>`).join("")}</select></label></div>
+      <div class="cfe-grade-workspace"><div><div class="cfe-collection-controls"><label><span class="screenreader-only">Search grades</span><input data-cfe-collection-search type="search" placeholder="Search graded work"></label><span>${rows.length} items</span></div>
       <section class="cfe-data-table"><header><span>Assignment</span><span>Due</span><span>Status</span><span>Score</span></header>${rows.map((assignment) => {
         const status = assignmentStatus(assignment);
         const score = assignment?.submission?.score;
         return `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.grade || ""))}</small></div><span>${escapeHtml(formatCourseDate(assignment?.due_at))}</span><em class="is-${status.tone}">${escapeHtml(status.label)}</em><b>${score === null || score === undefined ? "—" : escapeHtml(String(score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))}</b></a>`;
-      }).join("") || '<div class="cfe-collection-empty">No grade information is available.</div>'}</section>`,
+      }).join("") || '<div class="cfe-collection-empty">No grade information is available.</div>'}</section></div><aside class="cfe-course-context-panel"><section><header><h3>Weighted groups</h3><span>100%</span></header>${(Array.isArray(groups) ? groups : []).slice(0, 5).map((group) => `<div class="cfe-weight-row"><p><span>${escapeHtml(group?.name || "Assignments")}</span><strong>${Math.round(Number(group?.group_weight || 0))}%</strong></p><div class="cfe-progress-track"><i style="width:${Math.min(100, Math.max(0, Number(group?.group_weight || 0)))}%"></i></div></div>`).join("") || "<p>Assignment groups are not weighted.</p>"}</section><section><header><h3>Score guide</h3></header><p>Submitted and graded work is included in the current total. Missing work may count as zero.</p></section></aside></div>`,
     );
     bindCollectionSearch(root, "[data-cfe-collection-row]");
     return root;
@@ -1013,12 +1079,12 @@
     });
     root.insertAdjacentHTML(
       "beforeend",
-      `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search people</span><input data-cfe-collection-search type="search" placeholder="Search people"></label><span>${rows.length} people</span></div>
+      `<div class="cfe-people-workspace"><div><div class="cfe-collection-controls"><label><span class="screenreader-only">Search people</span><input data-cfe-collection-search type="search" placeholder="Search people"></label><select aria-label="Filter by role"><option>All roles</option><option>Student</option><option>Teacher</option></select><span>${rows.length} people</span></div>
       <section class="cfe-data-table cfe-people-table"><header><span>Person</span><span>Role</span><span>Section</span><span>Status</span></header>${rows.map((person) => {
         const name = person?.display_name || person?.name || "Canvas user";
         const enrollment = Array.isArray(person?.enrollments) ? person.enrollments[0] : null;
         return `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(person?.html_url || person?.url || "#"))}"><div class="cfe-person-cell"><i>${escapeHtml(announcementInitials(name))}</i><span><strong>${escapeHtml(name)}</strong><small>${escapeHtml(person?.sortable_name || "Enrolled")}</small></span></div><span>${escapeHtml(personRole(person))}</span><span>${escapeHtml(enrollment?.sis_section_id || enrollment?.course_section_id ? `Section ${enrollment?.course_section_id || enrollment?.sis_section_id}` : "Course section")}</span><em class="is-${enrollment?.enrollment_state === "active" ? "success" : "muted"}">${escapeHtml(enrollment?.enrollment_state || "Active")}</em></a>`;
-      }).join("") || '<div class="cfe-collection-empty">The course roster is unavailable.</div>'}</section>`,
+      }).join("") || '<div class="cfe-collection-empty">The course roster is unavailable.</div>'}</section></div><aside class="cfe-course-context-panel"><section><header><h3>Enrollment summary</h3></header>${Array.from(rows.reduce((map, person) => { const role = personRole(person); map.set(role, (map.get(role) || 0) + 1); return map; }, new Map())).map(([role, count]) => `<p class="cfe-summary-line"><span>${escapeHtml(role)}s</span><strong>${count}</strong></p>`).join("")}</section><section><header><h3>Roster tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/users`)}">View complete roster</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/groups`)}">View course groups</a></section></aside></div>`,
     );
     bindCollectionSearch(root, "[data-cfe-collection-row]");
     return root;
@@ -1058,18 +1124,23 @@
     return root;
   }
 
-  function renderPagesExperience(pages, selectedPage, courseName, courseId) {
+  function courseFileRowsHtml(files) {
+    const rows = (Array.isArray(files) ? files : []).filter(Boolean);
+    return `<section class="cfe-data-table cfe-files-table"><header><span>Name</span><span>Size</span><span>Modified</span><span>Type</span></header>${rows.map((file) => `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(file?.url || file?.preview_url || "#"))}"><div><strong>${escapeHtml(file?.display_name || file?.filename || "Course file")}</strong><small>${escapeHtml(file?.folder_id ? `Folder ${file.folder_id}` : "Course file")}</small></div><span>${escapeHtml(file?.size ? `${Math.max(1, Math.round(Number(file.size) / 1024))} KB` : "—")}</span><span>${escapeHtml(formatCourseDate(file?.modified_at || file?.updated_at))}</span><b>${escapeHtml(file?.content_type || "File")}</b></a>`).join("") || '<div class="cfe-collection-empty">No course files are available.</div>'}</section>`;
+  }
+
+  function renderPagesExperience(pages, files, selectedPage, courseName, courseId, activeKind = "pages") {
     const rows = (Array.isArray(pages) ? pages : []).filter(Boolean);
     let activePage = selectedPage || rows[0] || null;
     const root = createDataExperienceRoot({
-      kind: "pages",
+      kind: activeKind,
       eyebrow: "Course content",
       title: "Pages & Files",
       description: `Course reading and shared resources for ${courseName}.`,
     });
     root.insertAdjacentHTML(
       "beforeend",
-      `<div class="cfe-pages-grid"><section class="cfe-page-index"><header><h2>Pages index</h2><span>${rows.length} pages</span></header><label><span class="screenreader-only">Filter pages</span><input data-cfe-collection-search placeholder="Filter pages"></label><div>${rows.map((page) => `<button type="button" data-cfe-page-url="${escapeAttr(page?.url || "")}" data-cfe-collection-row><strong>${escapeHtml(page?.title || "Course page")}</strong><small>${page?.front_page ? "Front page · " : ""}Updated ${escapeHtml(formatCourseDate(page?.updated_at))}</small></button>`).join("") || '<div class="cfe-collection-empty">No pages are available.</div>'}</div></section><article class="cfe-page-reader" data-cfe-page-reader></article></div>`,
+      `<div class="cfe-content-tabs" role="tablist"><button type="button" class="${activeKind === "pages" ? "is-active" : ""}" data-cfe-content-tab="pages">Pages <span>${rows.length}</span></button><button type="button" class="${activeKind === "files" ? "is-active" : ""}" data-cfe-content-tab="files">Files <span>${Array.isArray(files) ? files.length : 0}</span></button></div><div data-cfe-content-panel="pages" ${activeKind === "files" ? "hidden" : ""}><div class="cfe-pages-grid"><section class="cfe-page-index"><header><h2>Pages index</h2><span>${rows.length} pages</span></header><label><span class="screenreader-only">Filter pages</span><input data-cfe-collection-search placeholder="Filter pages"></label><div>${rows.map((page) => `<button type="button" data-cfe-page-url="${escapeAttr(page?.url || "")}" data-cfe-collection-row><strong>${escapeHtml(page?.title || "Course page")}</strong><small>${page?.front_page ? "Front page · " : ""}Updated ${escapeHtml(formatCourseDate(page?.updated_at))}</small></button>`).join("") || '<div class="cfe-collection-empty">No pages are available.</div>'}</div></section><article class="cfe-page-reader" data-cfe-page-reader></article></div></div><div data-cfe-content-panel="files" ${activeKind === "pages" ? "hidden" : ""}>${courseFileRowsHtml(files)}</div>`,
     );
     const reader = root.querySelector("[data-cfe-page-reader]");
     const paintReader = (page) => {
@@ -1104,6 +1175,17 @@
       });
     });
     bindCollectionSearch(root, "[data-cfe-collection-row]");
+    root.querySelectorAll("[data-cfe-content-tab]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = button.getAttribute("data-cfe-content-tab");
+        root.querySelectorAll("[data-cfe-content-tab]").forEach((tab) =>
+          tab.classList.toggle("is-active", tab === button),
+        );
+        root.querySelectorAll("[data-cfe-content-panel]").forEach((panel) => {
+          panel.hidden = panel.getAttribute("data-cfe-content-panel") !== target;
+        });
+      });
+    });
     paintReader(activePage);
     return root;
   }
@@ -1149,6 +1231,35 @@
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         root = renderSyllabusExperience(await response.json(), courseName);
+      } else if (experience === "course-home") {
+        const courseUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}`);
+        ["term", "teachers", "total_scores"].forEach((include) =>
+          courseUrl.searchParams.append("include[]", include),
+        );
+        const modulesUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/modules`);
+        modulesUrl.searchParams.set("per_page", "20");
+        modulesUrl.searchParams.append("include[]", "items");
+        const assignmentsUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/assignments`);
+        assignmentsUrl.searchParams.set("per_page", "20");
+        assignmentsUrl.searchParams.set("order_by", "due_at");
+        assignmentsUrl.searchParams.append("include[]", "submission");
+        const announcementsUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/discussion_topics`);
+        announcementsUrl.searchParams.set("only_announcements", "true");
+        announcementsUrl.searchParams.set("per_page", "10");
+        const [course, modules, assignments, announcements] = await Promise.all([
+          fetchCanvasJson(courseUrl),
+          fetchCanvasJson(modulesUrl).catch(() => []),
+          fetchCanvasJson(assignmentsUrl).catch(() => []),
+          fetchCanvasJson(announcementsUrl).catch(() => []),
+        ]);
+        root = renderCourseHomeExperience(
+          course,
+          modules,
+          assignments,
+          announcements,
+          courseName,
+          courseId,
+        );
       } else if (experience === "announcements" || experience === "discussions") {
         const url = new URL(
           `${window.location.origin}/api/v1/courses/${courseId}/discussion_topics`,
@@ -1182,14 +1293,14 @@
         assignmentsUrl.searchParams.set("per_page", "100");
         assignmentsUrl.searchParams.append("include[]", "submission");
         const assignments = await fetchCanvasJson(assignmentsUrl);
+        const groupsUrl = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/assignment_groups`,
+        );
+        groupsUrl.searchParams.set("per_page", "50");
+        const groups = await fetchCanvasJson(groupsUrl).catch(() => []);
         if (experience === "grades") {
-          root = renderGradesExperience(assignments, courseName);
+          root = renderGradesExperience(assignments, groups, courseName);
         } else {
-          const groupsUrl = new URL(
-            `${window.location.origin}/api/v1/courses/${courseId}/assignment_groups`,
-          );
-          groupsUrl.searchParams.set("per_page", "50");
-          const groups = await fetchCanvasJson(groupsUrl).catch(() => []);
           root = renderAssignmentsExperience(assignments, groups, courseName);
         }
       } else if (experience === "people") {
@@ -1205,21 +1316,22 @@
         );
         url.searchParams.set("per_page", "100");
         root = renderQuizzesExperience(await fetchCanvasJson(url), courseName);
-      } else if (experience === "files") {
-        const url = new URL(
-          `${window.location.origin}/api/v1/courses/${courseId}/files`,
-        );
-        url.searchParams.set("per_page", "100");
-        url.searchParams.set("sort", "name");
-        url.searchParams.set("order", "asc");
-        root = renderFilesExperience(await fetchCanvasJson(url), courseName);
-      } else if (experience === "pages") {
+      } else if (experience === "pages" || experience === "files") {
         const url = new URL(
           `${window.location.origin}/api/v1/courses/${courseId}/pages`,
         );
         url.searchParams.set("per_page", "100");
         url.searchParams.set("sort", "title");
-        const pages = await fetchCanvasJson(url);
+        const filesUrl = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/files`,
+        );
+        filesUrl.searchParams.set("per_page", "100");
+        filesUrl.searchParams.set("sort", "name");
+        filesUrl.searchParams.set("order", "asc");
+        const [pages, files] = await Promise.all([
+          fetchCanvasJson(url).catch(() => []),
+          fetchCanvasJson(filesUrl).catch(() => []),
+        ]);
         let selectedPage = null;
         const routePageUrl = decodeURIComponent(
           path.match(/\/(?:pages|wiki)\/([^/?#]+)/)?.[1] || "",
@@ -1230,7 +1342,14 @@
             `${window.location.origin}/api/v1/courses/${courseId}/pages/${encodeURIComponent(firstUrl)}`,
           ).catch(() => pages[0]);
         }
-        root = renderPagesExperience(pages, selectedPage, courseName, courseId);
+        root = renderPagesExperience(
+          pages,
+          files,
+          selectedPage,
+          courseName,
+          courseId,
+          experience,
+        );
       }
       if (requestId !== courseExperienceRequestId || !root) {
         if (requestId === courseExperienceRequestId) removeCourseDataExperience();
