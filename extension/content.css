@@ -5185,6 +5185,57 @@ body.cfe-dashboard-only {
     }
 }
 
+/* Native workflow pages keep Canvas behavior while using the approved
+   centered main/rail proportions. */
+body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-detail) #not_right_side {
+    width: 100% !important;
+    max-width: 1120px !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    gap: 24px !important;
+}
+
+body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-detail) .ic-Layout-contentWrapper {
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+}
+
+body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-detail) #content.ic-Layout-contentMain {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 24px 0 32px !important;
+}
+
+body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-detail) #right-side-wrapper {
+    box-sizing: border-box !important;
+    width: 270px !important;
+    min-width: 270px !important;
+    flex: 0 0 270px !important;
+    padding: 24px 0 32px !important;
+}
+
+body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-detail) #right-side {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+}
+
+@media (max-width: 1180px) {
+    body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-detail) #not_right_side {
+        display: block !important;
+        padding: 0 20px !important;
+    }
+
+    body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-detail) #right-side-wrapper {
+        width: 100% !important;
+        min-width: 0 !important;
+        padding-top: 0 !important;
+    }
+}
+
 @media (max-width: 760px) {
     #cfe-dashboard:not(.cfe-layout-edit-mode) {
         width: calc(100vw - 24px) !important;
@@ -7760,12 +7811,83 @@ body.cfe-theme-applied.cfe-page-external-tool .ic-Layout-contentMain {
 
 body.cfe-theme-applied.cfe-page-external-tool #content {
     max-width: none !important;
+    box-sizing: border-box !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 248px !important;
+    gap: 16px !important;
+    padding: 24px !important;
 }
 
 body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-toolbar {
-    margin-bottom: 16px !important;
-    padding-bottom: 16px !important;
+    grid-column: 1 / -1;
+    margin: 0 !important;
+    padding: 0 !important;
     align-items: center !important;
+    border-bottom: 0 !important;
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 248px;
+    min-width: 0;
+    gap: 16px;
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-states {
+    overflow: hidden;
+    color: var(--cfe-text);
+    background: var(--cfe-surface-alt);
+    border: 1px solid var(--cfe-border);
+    border-radius: 10px;
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-states > header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-states h2 {
+    margin: 0;
+    font-family: var(--cfe-font-body);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-states p {
+    margin: 3px 0 0;
+    color: var(--cfe-muted);
+    font-size: 9px;
+    line-height: 1.55;
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-states section {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-states section strong {
+    font-size: 11px;
+    font-weight: 650;
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-states :where(button, a) {
+    min-height: 0 !important;
+    margin: 5px 0 0 !important;
+    padding: 0 !important;
+    color: var(--cfe-accent) !important;
+    background: transparent !important;
+    border: 0 !important;
+    font-size: 9px !important;
+    font-weight: 650 !important;
+    text-decoration: none !important;
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-states footer {
+    padding: 12px 16px;
+    color: var(--cfe-accent-strong);
+    background: var(--cfe-accent-soft);
+    font-size: 9px;
+    line-height: 1.55;
 }
 
 body.cfe-theme-applied.cfe-page-external-tool :where(
@@ -7775,9 +7897,21 @@ body.cfe-theme-applied.cfe-page-external-tool :where(
     .external-tool-content,
     [data-testid*="external-tool"]
 ) {
-    height: calc(100vh - 153px) !important;
+    height: calc(100vh - 190px) !important;
     min-height: 420px !important;
     border-radius: 10px !important;
+}
+
+body.cfe-theme-applied.cfe-page-external-tool :where(
+    #tool_content,
+    #external_tool,
+    .tool_content_wrapper,
+    .external-tool-content,
+    [data-testid*="external-tool"]
+)::before {
+    display: flex !important;
+    min-height: 40px !important;
+    content: "Secure external content" !important;
 }
 
 body.cfe-theme-applied.cfe-page-external-tool :where(
@@ -7787,8 +7921,18 @@ body.cfe-theme-applied.cfe-page-external-tool :where(
     iframe[src*="panopto"],
     iframe[src*="instructuremedia"]
 ) {
-    height: 100% !important;
+    height: calc(100% - 40px) !important;
     min-height: 420px !important;
+}
+
+@media (max-width: 1180px) {
+    body.cfe-theme-applied.cfe-page-external-tool #content {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body.cfe-theme-applied.cfe-page-external-tool .cfe-tool-states {
+        display: none;
+    }
 }
 
 @media (max-width: 1023px) {
@@ -7832,6 +7976,7 @@ html.cfe-data-experience-active body.cfe-theme-applied.cfe-data-experience-activ
 }
 
 html.cfe-data-experience-active body.cfe-theme-applied.cfe-data-experience-active #right-side,
+html.cfe-data-experience-active body.cfe-theme-applied.cfe-data-experience-active #right-side-wrapper,
 html.cfe-data-experience-active body.cfe-theme-applied.cfe-data-experience-active .right-side {
     display: none !important;
 }
@@ -7847,6 +7992,25 @@ html.cfe-data-experience-active body.cfe-theme-applied.cfe-data-experience-activ
     max-width: none !important;
     padding: 32px !important;
     background: var(--cfe-surface) !important;
+}
+
+html.cfe-data-experience-active body.cfe-theme-applied.cfe-data-experience-active .ic-Layout-contentWrapper {
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    flex: 1 1 auto !important;
+}
+
+html.cfe-data-experience-active body.cfe-theme-applied.cfe-data-experience-active #content.ic-Layout-contentMain {
+    box-sizing: border-box !important;
+    padding-top: 32px !important;
+    padding-bottom: 32px !important;
+}
+
+html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-syllabus #content,
+html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-syllabus .cfe-course-data-experience {
+    width: 100% !important;
+    max-width: 1056px !important;
 }
 
 html.cfe-data-experience-active body.cfe-theme-applied .cfe-course-data-experience {
@@ -8258,9 +8422,9 @@ body.cfe-theme-applied .cfe-module-workspace,
 body.cfe-theme-applied .cfe-grade-workspace,
 body.cfe-theme-applied .cfe-people-workspace {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 250px;
+    grid-template-columns: minmax(0, 1fr) 224px;
     align-items: start;
-    gap: 20px;
+    gap: 24px;
 }
 
 body.cfe-theme-applied .cfe-course-context-panel {

@@ -42,6 +42,7 @@ function fixture(activeSection, duplicateCount = 6) {
         <main id="content" class="ic-Layout-contentMain">
           <div class="ic-Action-header"><h1>AP Calculus AB Per C-1233</h1></div>
           <article id="course_syllabus"><h2>Course information</h2><p>Policies and expectations.</p></article>
+          ${activeSection === "Panopto Recordings" ? '<div class="tool_content_wrapper"><iframe id="tool_content_642" name="tool_content_642" src="about:blank"></iframe></div>' : ""}
         </main>
         <aside id="right-side"><section id="cfe-course-widget-board">Wrong home widgets</section></aside>
       </div>
@@ -212,6 +213,17 @@ async function runCase(browser, url, activeSection, options = {}) {
         "[data-cfe-collection-row], [data-cfe-announcement-id]",
       ).length,
       experienceTitle: document.querySelector(".cfe-course-data-experience h1")?.textContent,
+      injectedHeaderCopies: document.querySelectorAll(
+        ".cfe-course-data-experience .cfe-course-page-copy",
+      ).length,
+      adaptedHeaderCount: document.querySelectorAll(".cfe-course-page-header").length,
+      adaptedCopyCount: document.querySelectorAll(".cfe-course-page-copy").length,
+      toolbars: document.querySelectorAll(".cfe-tool-toolbar").length,
+      toolFrameHosts: document.querySelectorAll(".cfe-tool-frame-host").length,
+      toolStatePanels: document.querySelectorAll(".cfe-tool-states").length,
+      pageTypeClasses: Array.from(document.body.classList).filter((name) =>
+        name.startsWith("cfe-page-"),
+      ),
       moduleCollapsed:
         document.querySelector("[data-cfe-module-toggle]")?.getAttribute("aria-expanded") === "false" &&
         Boolean(document.querySelector("[data-cfe-module-items]")?.hidden),
@@ -295,6 +307,26 @@ async function runCase(browser, url, activeSection, options = {}) {
       assert.equal(current.experienceTitle, title, `${section}: wrong title`);
       assert.ok(current.collectionRows >= 1, `${section}: no data rows rendered`);
       assert.equal(current.horizontalOverflow, false, `${section}: horizontal overflow`);
+      assert.equal(
+        current.injectedHeaderCopies,
+        0,
+        `${section}: data header was reprocessed`,
+      );
+      const expectedPageClass = {
+        Modules: "cfe-page-modules",
+        Assignments: "cfe-page-assignments",
+        Discussions: "cfe-page-discussions",
+        Grades: "cfe-page-grades",
+        People: "cfe-page-people",
+        Pages: "cfe-page-pages",
+        Files: "cfe-page-files",
+        Quizzes: "cfe-page-assessments",
+      }[section];
+      assert.deepEqual(
+        current.pageTypeClasses.sort(),
+        ["cfe-page-course", expectedPageClass].sort(),
+        `${section}: stale route classes leaked`,
+      );
       if (section === "Modules") {
         assert.equal(current.moduleCollapsed, true, "Modules: collapse control failed");
       }
@@ -328,6 +360,13 @@ async function runCase(browser, url, activeSection, options = {}) {
       assert.equal(current.nativeHidden, false, `${section}: native workflow was hidden`);
       assert.match(current.bodyClasses, new RegExp(`(?:^|\\s)${expectedClass}(?:\\s|$)`));
       assert.equal(current.horizontalOverflow, false, `${section}: horizontal overflow`);
+      assert.equal(current.adaptedHeaderCount, 1, `${section}: header adapter repeated`);
+      assert.equal(current.adaptedCopyCount, 1, `${section}: header copy repeated`);
+      if (section === "Panopto Recordings") {
+        assert.equal(current.toolbars, 1, "Panopto: toolbar missing or repeated");
+        assert.equal(current.toolFrameHosts, 1, "Panopto: frame host missing or repeated");
+        assert.equal(current.toolStatePanels, 1, "Panopto: state panel missing or repeated");
+      }
     }
 
     const fallback = await runCase(

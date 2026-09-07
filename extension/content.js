@@ -1,6 +1,8 @@
 ﻿(() => {
+  const CONTENT_BUILD = "0.8.9";
   const scriptInstanceId = `cfe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   window.__cfeActiveInstanceId = scriptInstanceId;
+  document.documentElement.dataset.cfeBuild = CONTENT_BUILD;
 
   try {
     const quickCanvasIconUrl = chrome.runtime.getURL("icons/icon48.png");
@@ -251,8 +253,14 @@
     };
     const applyClasses = (target) => {
       if (!target) return;
+      // Course pages can survive Canvas' client-side route transitions. Clear
+      // every class owned by this classifier before applying the new route so
+      // a previous page type can never leak into the current one.
+      Object.keys(pageTypes).forEach((className) => {
+        target.classList.remove(className);
+      });
       Object.entries(pageTypes).forEach(([className, enabled]) => {
-        target.classList.toggle(className, enabled);
+        if (enabled) target.classList.add(className);
       });
     };
     const pageKind = Object.entries(pageTypes)
@@ -285,6 +293,10 @@
     "cfe-page-modules": {
       eyebrow: "Course content",
       description: "Organize readings, activities, and assessments by week.",
+    },
+    "cfe-page-assignment-detail": {
+      eyebrow: "Assignment",
+      description: "",
     },
     "cfe-page-assignments": {
       eyebrow: "Course content",
@@ -372,12 +384,20 @@
   function ensureCoursePageHeader(courseName) {
     const content = document.querySelector("#content, .ic-Layout-contentMain");
     if (!content) return;
+    // Data-backed experiences render their own approved header. Reprocessing
+    // that header on each bounded adapter retry nests another copy wrapper and
+    // repeats the eyebrow/description, eventually destroying the layout.
+    if (content.querySelector(":scope > .cfe-course-data-experience")) return;
     const presentation = currentCoursePresentation();
-    let title = content.querySelector(
+    const adaptedHeader = content.querySelector(":scope .cfe-course-page-header");
+    let title = adaptedHeader?.querySelector(
+      ".cfe-course-page-title, .ic-Action-header__Heading, h1:not(.screenreader-only)",
+    ) || content.querySelector(
       ".ic-Action-header__Heading, h1:not(.screenreader-only)",
     );
+    if (title?.closest(".cfe-course-data-experience")) return;
     if (title?.closest(".cfe-tool-toolbar")) title = null;
-    let header = title?.closest(
+    let header = adaptedHeader || title?.closest(
       ".ic-Action-header, .header-bar, [data-testid='page-header']",
     );
 
@@ -412,7 +432,9 @@
       delete title.dataset.cfeOriginalTitle;
     }
     let copy =
-      title.closest(".ic-Action-header__Primary") || title.parentElement || header;
+      title.closest(".cfe-course-page-copy, .ic-Action-header__Primary") ||
+      title.parentElement ||
+      header;
     if (copy === header) {
       copy = document.createElement("div");
       copy.className =
@@ -433,6 +455,10 @@
     let description = copy.querySelector(
       ":scope > .cfe-course-page-description",
     );
+    if (!presentation.description) {
+      description?.remove();
+      return;
+    }
     if (!description) {
       description = document.createElement("p");
       description.className = "cfe-course-page-description";
@@ -445,7 +471,7 @@
 
   function courseToolFrame() {
     return document.querySelector(
-      "#external_tool_iframe, iframe[name='tool_content'], iframe[src*='external_tools'], iframe[src*='panopto'], iframe[src*='instructuremedia']",
+      "#external_tool_iframe, iframe[id^='tool_content_'], iframe[name='tool_content'], iframe[name^='tool_content_'], .tool_content_wrapper iframe, iframe[src*='external_tools'], iframe[src*='panopto'], iframe[src*='instructuremedia']",
     );
   }
 
@@ -456,9 +482,8 @@
       frame?.closest(
         "#tool_content, #external_tool, .tool_content_wrapper, .external-tool-content, [data-testid*='external-tool']",
       ) || frame;
-    const existingToolbar = host?.parentElement?.querySelector(
-      ":scope > .cfe-tool-toolbar",
-    );
+    const parent = host?.parentElement;
+    const existingToolbar = document.querySelector("#content > .cfe-tool-toolbar");
     if (!host || existingToolbar) {
       return;
     }
@@ -467,6 +492,8 @@
         "#content h1",
         "#section-tabs .section.active",
         ".ic-app-crumbs__crumb--current",
+        ".ic-app-crumbs__crumbs li:last-child",
+        "#breadcrumbs li:last-child",
       ]) || "Course tool";
     const toolbar = document.createElement("section");
     toolbar.className = "cfe-tool-toolbar";
@@ -480,15 +507,32 @@
       <div class="cfe-tool-toolbar-actions">
         <span class="cfe-tool-connected"><i aria-hidden="true"></i>Connected</span>
         <button type="button" data-cfe-tool-action="reload">Reload</button>
-        <button type="button" data-cfe-tool-action="fullscreen">Fullscreen</button>
-        <a data-cfe-tool-action="open" target="_blank" rel="noopener noreferrer">Open separately</a>
+        <button type="button" data-cfe-tool-action="fullscreen" aria-label="Enter fullscreen">⛶</button>
+        <a data-cfe-tool-action="open" target="_blank" rel="noopener noreferrer">Open in new window</a>
       </div>`;
     host.before(toolbar);
+    host.classList.add("cfe-tool-frame-host");
+    let states = parent?.querySelector(":scope > .cfe-tool-states");
+    if (!states) {
+      const states = document.createElement("aside");
+      states.className = "cfe-tool-states";
+      states.setAttribute("aria-label", "External tool states");
+      states.innerHTML = `<header><h2>Wrapper states</h2><p>Canvas-owned recovery and launch controls</p></header><div><section><strong>Loading &amp; launch</strong><p>Progress remains visible while the provider responds.</p></section><section><strong>Authentication required</strong><p>Continue sign-in in a new window, then reload.</p></section><section><strong>Permission denied</strong><p>Course role or enrollment does not allow access.</p></section><section><strong>Timeout</strong><p>The provider took too long to respond.</p><button type="button" data-cfe-tool-action="retry">Try again</button></section><section><strong>Blocked content</strong><p>Browser policy prevented embedded display.</p><a data-cfe-tool-action="blocked-open" target="_blank" rel="noopener noreferrer">Open outside Canvas</a></section></div><footer><strong>Vendor boundary:</strong> QuickCanvas styles this wrapper only. The embedded application retains its own interface and behavior.</footer>`;
+      host.after(states);
+    }
     const openLink = toolbar.querySelector('[data-cfe-tool-action="open"]');
     const frameUrl = frame?.getAttribute("src") || "";
+    const safeFrameUrl = frameUrl && frameUrl !== "about:blank" ? frameUrl : window.location.href;
     if (openLink) {
-      openLink.href = sanitizeHref(frameUrl || window.location.href);
+      openLink.href = sanitizeHref(safeFrameUrl);
     }
+    parent?.querySelectorAll(':scope > .cfe-tool-states [data-cfe-tool-action="blocked-open"]').forEach((link) => {
+      link.href = sanitizeHref(safeFrameUrl);
+    });
+    parent?.querySelector(':scope > .cfe-tool-states [data-cfe-tool-action="retry"]')?.addEventListener("click", () => {
+      const activeFrame = courseToolFrame();
+      if (activeFrame?.src) activeFrame.src = activeFrame.src;
+    });
     toolbar
       .querySelector('[data-cfe-tool-action="reload"]')
       ?.addEventListener("click", () => {
@@ -610,7 +654,7 @@
         </div>
         <div class="cfe-data-page-actions">
           <button type="button" data-cfe-syllabus-print>Print</button>
-          <button type="button" class="is-primary" data-cfe-syllabus-pdf>Save PDF</button>
+          <button type="button" class="is-primary" data-cfe-syllabus-pdf>Download PDF</button>
         </div>
       </header>
       <div class="cfe-syllabus-grid">
@@ -744,7 +788,7 @@
     );
     root.innerHTML = `
       <header class="cfe-data-page-header">
-        <div class="cfe-data-page-copy"><p class="cfe-data-eyebrow">${isDiscussion ? "Course conversations" : "Course communication"}</p><h1>${isDiscussion ? "Discussions" : "Announcements"}</h1><p>${isDiscussion ? `Read closely and contribute thoughtfully in ${escapeHtml(courseName)}.` : `Updates and notices from ${escapeHtml(courseName)}.`}</p></div>
+        <div class="cfe-data-page-copy"><p class="cfe-data-eyebrow">${isDiscussion ? "Course conversations" : "Course communication"}</p><h1>${isDiscussion ? "Discussions" : "Announcements"}</h1><p>${isDiscussion ? "Read closely, contribute thoughtfully, and follow replies." : "Updates and notices from your course team."}</p></div>
         ${createLink?.href ? `<div class="cfe-data-page-actions"><a class="is-primary" href="${escapeAttr(createLink.href)}">+ ${isDiscussion ? "Discussion" : "Announcement"}</a></div>` : ""}
       </header>
       <div class="cfe-announcement-controls${isDiscussion ? " is-discussion" : ""}"><label><span class="screenreader-only">Search ${plural}</span><input type="search" placeholder="${isDiscussion ? "Search topics or authors" : `Search ${plural}`}"></label>${isDiscussion ? `<select data-cfe-announcement-filter aria-label="Filter discussions"><option value="all">All discussions</option><option value="unread">Unread</option><option value="graded">Graded</option><option value="locked">Locked</option></select><select data-cfe-discussion-sort aria-label="Sort discussions"><option value="recent">Recent activity</option><option value="due">Due date</option><option value="title">Topic title</option></select>` : `<button type="button" data-cfe-announcement-filter>All ${plural}</button>`}</div>
@@ -909,12 +953,11 @@
       kind: "modules",
       eyebrow: "Course content",
       title: "Modules",
-      description: `Organized learning materials for ${courseName}.`,
+      description: "Organize readings, activities, and assessments by week.",
     });
     root.insertAdjacentHTML(
       "beforeend",
-      `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search modules</span><input data-cfe-collection-search type="search" placeholder="Search modules and items"></label><span>${safeModules.length} modules</span></div>
-      <div class="cfe-module-workspace"><div class="cfe-module-list">${safeModules
+      `<div class="cfe-module-workspace"><div class="cfe-module-list">${safeModules
         .map((module, moduleIndex) => {
           const items = Array.isArray(module?.items) ? module.items : [];
           const completed = items.filter(
@@ -938,7 +981,6 @@
         if (items) items.hidden = expanded;
       });
     });
-    bindCollectionSearch(root, "[data-cfe-collection-row]");
     return root;
   }
 
@@ -998,7 +1040,7 @@
       kind: "assignments",
       eyebrow: "Course content",
       title: "Assignments",
-      description: `Upcoming work and submission status for ${courseName}.`,
+      description: "Review upcoming work, submission states, and assignment groups.",
     });
     root.insertAdjacentHTML(
       "beforeend",
@@ -1292,12 +1334,14 @@
         );
         assignmentsUrl.searchParams.set("per_page", "100");
         assignmentsUrl.searchParams.append("include[]", "submission");
-        const assignments = await fetchCanvasJson(assignmentsUrl);
         const groupsUrl = new URL(
           `${window.location.origin}/api/v1/courses/${courseId}/assignment_groups`,
         );
         groupsUrl.searchParams.set("per_page", "50");
-        const groups = await fetchCanvasJson(groupsUrl).catch(() => []);
+        const [assignments, groups] = await Promise.all([
+          fetchCanvasJson(assignmentsUrl),
+          fetchCanvasJson(groupsUrl).catch(() => []),
+        ]);
         if (experience === "grades") {
           root = renderGradesExperience(assignments, groups, courseName);
         } else {
@@ -1363,6 +1407,10 @@
 
   function removeCourseDesignAdapter() {
     removeCourseDataExperience();
+    document.querySelectorAll(".cfe-tool-states").forEach((node) => node.remove());
+    document.querySelectorAll(".cfe-tool-frame-host").forEach((node) =>
+      node.classList.remove("cfe-tool-frame-host"),
+    );
     document
       .querySelectorAll(".cfe-course-page-copy--injected")
       .forEach((wrapper) => {
