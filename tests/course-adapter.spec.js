@@ -167,18 +167,42 @@ async function runCase(browser, url, activeSection, options = {}) {
       });
     }
     const collectionFixtures = {
-      "/api/v1/courses/10585/modules": [{ id: 1, name: "Limits", published: true, items: [{ id: 11, title: "Limits overview", type: "Page", html_url: "https://canvas.test/courses/10585/pages/limits" }] }],
+      "/api/v1/courses/10585/modules": [
+        { id: 1, name: "Limits", published: true, items: [{ id: 11, title: "Limits overview", type: "Page", html_url: "https://canvas.test/courses/10585/pages/limits" }] },
+        { id: 2, name: "Course resources", published: true, items_count: 2 },
+      ],
+      "/api/v1/courses/10585/modules/2/items": [
+        { id: 21, content_id: 13, title: "Formula reference.docx", type: "File", url: "https://canvas.test/api/v1/files/13" },
+        { id: 22, title: "External practice", type: "ExternalUrl", external_url: "https://example.edu/practice" },
+      ],
       "/api/v1/courses/10585/assignment_groups": [{ id: 4, name: "Practice" }],
       "/api/v1/courses/10585/assignments": [{ id: 7, name: "Chapter review", assignment_group_id: 4, due_at: "2026-09-08T13:00:00Z", points_possible: 20, submission_types: ["online_upload"], html_url: "https://canvas.test/courses/10585/assignments/7", submission: { workflow_state: "graded", score: 18, grade: "18" } }],
       "/api/v1/courses/10585/users": [{ id: 9, display_name: "Ada Student", sortable_name: "Student, Ada", enrollments: [{ type: "StudentEnrollment", enrollment_state: "active", course_section_id: 3 }] }],
       "/api/v1/courses/10585/quizzes": [{ id: 10, title: "Limits check", due_at: "2026-09-10T13:00:00Z", question_count: 8, points_possible: 10, html_url: "https://canvas.test/courses/10585/quizzes/10" }],
-      "/api/v1/courses/10585/files": [{ id: 12, display_name: "Review guide.pdf", size: 20480, modified_at: "2026-09-01T13:00:00Z", content_type: "application/pdf", url: "https://canvas.test/files/12/download" }],
+      "/api/v1/courses/10585/files": [
+        { id: 12, display_name: "Review guide.pdf", size: 20480, modified_at: "2026-09-01T13:00:00Z", content_type: "application/pdf", url: "https://canvas.test/files/12/download" },
+        { id: 13, display_name: "Formula reference.docx", size: 2097152, modified_at: "2026-09-02T13:00:00Z", "content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", url: "https://canvas.test/files/13/download" },
+      ],
       "/api/v1/courses/10585/pages": [{ url: "limits", title: "Limits overview", front_page: true, updated_at: "2026-09-01T13:00:00Z", html_url: "https://canvas.test/courses/10585/pages/limits" }],
       "/api/v1/courses/10585/pages/limits": { url: "limits", title: "Limits overview", updated_at: "2026-09-01T13:00:00Z", body: "<h2>Learning goals</h2><p>Evaluate limits graphically.</p>", html_url: "https://canvas.test/courses/10585/pages/limits" },
       "/api/v1/courses/10585/groups": [{ id: 31, name: "Calculus Study Group", members_count: 4 }],
     };
+    if (
+      requestUrl.pathname === "/api/v1/courses/10585/files" &&
+      requestUrl.searchParams.get("page") === "2"
+    ) {
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify([
+          { id: 14, display_name: "Chapter slides.pptx", size: 5242880, modified_at: "2026-09-03T13:00:00Z", content_type: "application/vnd.openxmlformats-officedocument.presentationml.presentation", url: "https://canvas.test/files/14/download" },
+        ]),
+      });
+    }
     if (Object.hasOwn(collectionFixtures, requestUrl.pathname)) {
-      return route.fulfill({ contentType: "application/json", body: JSON.stringify(collectionFixtures[requestUrl.pathname]) });
+      const headers = requestUrl.pathname === "/api/v1/courses/10585/files"
+        ? { link: '<https://canvas.test/api/v1/courses/10585/files?page=2>; rel="next"' }
+        : undefined;
+      return route.fulfill({ contentType: "application/json", headers, body: JSON.stringify(collectionFixtures[requestUrl.pathname]) });
     }
     if (requestUrl.pathname.endsWith("/api/v1/courses/10585")) {
       return route.fulfill({
@@ -327,6 +351,9 @@ async function runCase(browser, url, activeSection, options = {}) {
       announcementAttachments: document.querySelectorAll(
         ".cfe-announcement-attachment",
       ).length,
+      announcementAttachmentHref: document.querySelector(
+        ".cfe-announcement-attachment",
+      )?.getAttribute("href"),
       discussionReplies: document.querySelectorAll(
         ".cfe-discussion-reply",
       ).length,
@@ -382,6 +409,21 @@ async function runCase(browser, url, activeSection, options = {}) {
       moduleCollapsed:
         document.querySelector("[data-cfe-module-toggle]")?.getAttribute("aria-expanded") === "false" &&
         Boolean(document.querySelector("[data-cfe-module-items]")?.hidden),
+      moduleItemHrefs: Array.from(
+        document.querySelectorAll(".cfe-module-item"),
+      ).map((node) => node.getAttribute("href")),
+      filePreviewHrefs: Array.from(
+        document.querySelectorAll(".cfe-file-open"),
+      ).map((node) => node.getAttribute("href")),
+      fileDownloadHrefs: Array.from(
+        document.querySelectorAll(".cfe-file-download"),
+      ).map((node) => node.getAttribute("href")),
+      fileContentTypes: Array.from(
+        document.querySelectorAll(".cfe-file-row > b"),
+      ).map((node) => node.textContent),
+      filesNavHref: Array.from(
+        document.querySelectorAll("#section-tabs a[href]"),
+      ).find((node) => node.textContent.trim() === "Files")?.getAttribute("href"),
       searchFiltered:
         !document.querySelector("[data-cfe-collection-search]") ||
         Array.from(document.querySelectorAll("[data-cfe-collection-row]"))
@@ -450,6 +492,10 @@ async function runCase(browser, url, activeSection, options = {}) {
     assert.equal(announcements.announcementDetail, "Field lab moved");
     assert.equal(announcements.announcementRows, 2);
     assert.equal(announcements.announcementAttachments, 1);
+    assert.equal(
+      announcements.announcementAttachmentHref,
+      "https://canvas.test/courses/10585/files/71/download?wrap=1",
+    );
 
     const courseHome = await runCase(
       browser,
@@ -483,7 +529,7 @@ async function runCase(browser, url, activeSection, options = {}) {
       ["grades", "Grades", "Grades"],
       ["users", "People", "People"],
       ["pages", "Pages", "Pages & Files"],
-      ["files", "Files", "Pages & Files"],
+      ["pages?quickcanvas_tab=files", "Files", "Pages & Files"],
       ["quizzes", "Quizzes", "Quizzes & Assessments"],
     ];
     for (const [pathName, section, title] of routeCases) {
@@ -532,6 +578,46 @@ async function runCase(browser, url, activeSection, options = {}) {
       );
       if (section === "Modules") {
         assert.equal(current.moduleCollapsed, true, "Modules: collapse control failed");
+        assert.ok(
+          current.moduleItemHrefs.includes(
+            "https://canvas.test/courses/10585/files/13/download?wrap=1",
+          ),
+          "Modules: Office file did not open in the Canvas viewer",
+        );
+        assert.ok(
+          current.moduleItemHrefs.includes("https://example.edu/practice"),
+          "Modules: external_url fallback was ignored",
+        );
+      }
+      if (section === "Files") {
+        assert.equal(current.activeCourseNav, "Files", "Files: nav selection was lost");
+        assert.equal(
+          current.filesNavHref,
+          "https://canvas.test/courses/10585/pages?quickcanvas_tab=files",
+          "Files: hidden native route was not replaced",
+        );
+        assert.ok(
+          current.filePreviewHrefs.includes(
+            "https://canvas.test/courses/10585/files/13/download?wrap=1",
+          ),
+          "Files: DOCX did not open in the Canvas viewer",
+        );
+        assert.ok(
+          current.filePreviewHrefs.includes(
+            "https://canvas.test/courses/10585/files/14/download?wrap=1",
+          ),
+          "Files: PPTX did not open in the Canvas viewer",
+        );
+        assert.ok(
+          current.fileDownloadHrefs.includes("https://canvas.test/files/14/download"),
+          "Files: original download fallback is missing",
+        );
+        assert.ok(
+          current.fileContentTypes.includes(
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          ),
+          "Files: Canvas content-type field was not recognized",
+        );
       }
       if (["Assignments", "Grades", "People", "Quizzes"].includes(section)) {
         assert.equal(current.searchFiltered, true, `${section}: search control failed`);

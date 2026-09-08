@@ -8789,6 +8789,65 @@ body.cfe-theme-applied .cfe-data-table > a {
     padding: 0 16px;
 }
 
+body.cfe-theme-applied .cfe-files-table > header,
+body.cfe-theme-applied .cfe-file-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 88px 112px minmax(110px, 160px) 72px;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+}
+
+body.cfe-theme-applied .cfe-file-row {
+    min-height: 56px;
+    border-bottom: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-file-row:last-child {
+    border-bottom: 0;
+}
+
+body.cfe-theme-applied .cfe-file-row:hover {
+    background: var(--cfe-hover);
+}
+
+body.cfe-theme-applied .cfe-file-row > span,
+body.cfe-theme-applied .cfe-file-row > b {
+    overflow: hidden;
+    color: var(--cfe-muted);
+    font-size: 10px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.cfe-theme-applied .cfe-file-open {
+    min-width: 0;
+    color: var(--cfe-text) !important;
+    text-decoration: none !important;
+}
+
+body.cfe-theme-applied .cfe-file-open > div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+body.cfe-theme-applied .cfe-file-open strong,
+body.cfe-theme-applied .cfe-file-open small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.cfe-theme-applied .cfe-file-download {
+    color: var(--cfe-accent-strong) !important;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: right;
+    text-decoration: none !important;
+}
+
 body.cfe-theme-applied .cfe-data-table > header {
     min-height: 38px;
     color: var(--cfe-muted);
@@ -10021,6 +10080,17 @@ body.cfe-theme-applied .cfe-grades-experience {
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 6px 10px;
         padding: 12px 14px;
+    }
+
+    body.cfe-theme-applied .cfe-file-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 6px 10px;
+        padding: 12px 14px;
+    }
+
+    body.cfe-theme-applied .cfe-file-row > span,
+    body.cfe-theme-applied .cfe-file-row > b {
+        display: none;
     }
 
     body.cfe-theme-applied .cfe-assignment-row > span,

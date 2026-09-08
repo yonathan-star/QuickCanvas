@@ -1,5 +1,5 @@
 ﻿(() => {
-  const CONTENT_BUILD = "0.9.10";
+  const CONTENT_BUILD = "0.9.11";
   const scriptInstanceId = `cfe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   window.__cfeActiveInstanceId = scriptInstanceId;
   document.documentElement.dataset.cfeBuild = CONTENT_BUILD;
@@ -83,22 +83,34 @@
     let nextUrl = `${window.location.origin}/api/v1/planner/items?${params}`;
     const items = [];
     let pages = 0;
-    while (nextUrl && pages < 6) {
-      const response = await fetch(nextUrl, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
-      if (!response.ok) {
-        throw new Error(
-          response.status === 401 || response.status === 403
-            ? "Sign in to Canvas, then reload this page."
-            : `Canvas request failed: ${response.status}`,
-        );
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12_000);
+    try {
+      while (nextUrl && pages < 6) {
+        const response = await fetch(nextUrl, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(
+            response.status === 401 || response.status === 403
+              ? "Sign in to Canvas, then reload this page."
+              : `Canvas request failed: ${response.status}`,
+          );
+        }
+        const pageItems = await response.json();
+        if (Array.isArray(pageItems)) items.push(...pageItems);
+        nextUrl = resolveNextCanvasLink(response.headers.get("link"));
+        pages += 1;
       }
-      const pageItems = await response.json();
-      if (Array.isArray(pageItems)) items.push(...pageItems);
-      nextUrl = resolveNextCanvasLink(response.headers.get("link"));
-      pages += 1;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        throw new Error("Canvas took too long to respond. Reload and try again.");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
     return items;
   }
@@ -135,6 +147,10 @@
 
   function getCourseRouteContext(pathname) {
     const path = String(pathname || "/").toLowerCase();
+    const quickCanvasTab = new URLSearchParams(window.location.search || "").get(
+      "quickcanvas_tab",
+    );
+    const isQuickCanvasFiles = quickCanvasTab === "files";
     const courseMatch = path.match(/^\/courses\/([^/]+)(?:\/(.*))?$/);
     const courseTail = String(courseMatch?.[2] || "").replace(/\/+$/, "");
     const semanticText = [
@@ -199,11 +215,13 @@
         !isAnnouncementDetail &&
         (/^(discussion_topics|discussions)(\/|$)/.test(courseTail) ||
           rootSection.discussions),
-      isFiles: /^(files)(\/|$)/.test(courseTail),
+      isFiles: isQuickCanvasFiles || /^(files)(\/|$)/.test(courseTail),
       isGrades:
         /^(grades|gradebook)(\/|$)/.test(courseTail) || rootSection.grades,
       isModules: /^(modules)(\/|$)/.test(courseTail) || rootSection.modules,
-      isPages: /^(pages|wiki)(\/|$)/.test(courseTail) || rootSection.pages,
+      isPages:
+        !isQuickCanvasFiles &&
+        (/^(pages|wiki)(\/|$)/.test(courseTail) || rootSection.pages),
       isPeople:
         /^(users|people|groups)(\/|$)/.test(courseTail) || rootSection.people,
       isQuizzes:
@@ -440,6 +458,17 @@
     const homeItem = items.find(
       (item) => String(item.textContent || "").replace(/\s+/g, " ").trim().toLowerCase() === "home",
     );
+    const filesItem = items.find(
+      (item) => String(item.textContent || "").replace(/\s+/g, " ").trim().toLowerCase() === "files",
+    );
+    if (route.isFiles && filesItem) {
+      items.forEach((item) => item.classList.toggle("active", item === filesItem));
+      sectionTabs.querySelectorAll('[aria-current="page"]').forEach((node) => {
+        node.removeAttribute("aria-current");
+      });
+      filesItem.querySelector("a")?.setAttribute("aria-current", "page");
+      return;
+    }
     if (!homeItem) return;
     if (route.isCourseHome) {
       items.forEach((item) => item.classList.toggle("active", item === homeItem));
@@ -840,7 +869,7 @@
       .join("");
   }
 
-  function announcementDetailHtml(topic, isDiscussion = false) {
+  function announcementDetailHtml(topic, isDiscussion = false, courseId = "") {
     if (!topic) {
       return '<div class="cfe-announcement-empty"><h2>No announcements found</h2><p>Try another search or filter.</p></div>';
     }
@@ -852,7 +881,7 @@
       .filter(Boolean)
       .map(
         (attachment) =>
-          `<a class="cfe-announcement-attachment" href="${escapeAttr(sanitizeHref(attachment?.url || attachment?.preview_url || "#"))}"><span>${courseGlyph("file")}</span><p><strong>${escapeHtml(attachment?.display_name || attachment?.filename || "Attachment")}</strong><small>${escapeHtml(attachment?.content_type || "Course attachment")}</small></p></a>`,
+          `<a class="cfe-announcement-attachment" href="${escapeAttr(canvasFilePreviewHref(attachment, courseId))}"><span>${courseGlyph("file")}</span><p><strong>${escapeHtml(attachment?.display_name || attachment?.filename || "Attachment")}</strong><small>${escapeHtml(canvasFileContentType(attachment) || "Course attachment")}</small></p></a>`,
       )
       .join("");
     const replyEntries = (Array.isArray(topic?._cfeView?.view) ? topic._cfeView.view : [])
@@ -935,6 +964,7 @@
         detail.innerHTML = announcementDetailHtml(
           safeTopics.find((topic) => String(topic.id) === activeId),
           isDiscussion,
+          options.courseId,
         );
       }
       list?.querySelectorAll("[data-cfe-announcement-id]").forEach((button) => {
@@ -1038,7 +1068,16 @@
     return "";
   }
 
-  async function fetchCanvasJson(url, { ttlMs = 60_000, timeoutMs = 10_000, force = false } = {}) {
+  async function fetchCanvasJson(
+    url,
+    {
+      ttlMs = 60_000,
+      timeoutMs = 10_000,
+      force = false,
+      paginate = false,
+      maxPages = 8,
+    } = {},
+  ) {
     const href = String(url || "");
     const now = Date.now();
     const cached = courseApiResponseCache.get(href);
@@ -1050,21 +1089,38 @@
     }
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    const request = fetch(href, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
+    const request = (async () => {
+      let nextHref = href;
+      let pageCount = 0;
+      let data = null;
+      const collection = [];
+      while (nextHref && pageCount < Math.max(1, Number(maxPages) || 1)) {
+        const response = await fetch(nextHref, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        courseApiResponseCache.set(href, { timestamp: Date.now(), data });
-        return data;
-      })
-      .finally(() => {
-        clearTimeout(timeoutId);
-        courseApiInFlightRequests.delete(href);
-      });
+        const pageData = await response.json();
+        if (!paginate) {
+          data = pageData;
+          break;
+        }
+        if (!Array.isArray(pageData)) {
+          data = pageData;
+          break;
+        }
+        collection.push(...pageData);
+        nextHref = resolveNextCanvasLink(response.headers.get("link"));
+        pageCount += 1;
+      }
+      if (paginate && data === null) data = collection;
+      courseApiResponseCache.set(href, { timestamp: Date.now(), data });
+      return data;
+    })().finally(() => {
+      clearTimeout(timeoutId);
+      courseApiInFlightRequests.delete(href);
+    });
     courseApiInFlightRequests.set(href, request);
     return request;
   }
@@ -1169,7 +1225,7 @@
       <section class="cfe-course-home-card"><header><div><h2>Recent announcements</h2><p>Updates from your instructor</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/announcements`)}">View all</a></header>${safeAnnouncements.slice(0, 2).map((topic) => `<a class="cfe-course-home-row" href="${escapeAttr(sanitizeHref(topic?.html_url || `${window.location.origin}/courses/${courseId}/announcements`))}"><i class="${topic?.read_state === "read" ? "" : "is-unread"}"></i><div><strong>${escapeHtml(topic?.title || "Course announcement")}</strong><p>${escapeHtml(plainTextFromHtml(topic?.message).slice(0, 150))}</p><small>${escapeHtml(announcementAuthorName(topic))} · ${escapeHtml(formatCourseDate(topic?.posted_at || topic?.created_at))}</small></div></a>`).join("") || `<div class="cfe-course-home-empty"><span>${courseGlyph("message")}</span><div><strong>You’re all caught up</strong><p>No recent announcements from your instructor.</p></div></div>`}</section>
       <section class="cfe-course-home-card"><header><div><h2>Due soon</h2><p>Your upcoming course work</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/assignments`)}">All assignments</a></header>${dueSoon.map((assignment) => { const status = assignmentStatus(assignment); return `<a class="cfe-course-home-row is-assignment" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><span>${moduleItemIcon((assignment?.submission_types || [])[0] || "assignment")}</span><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><p>${escapeHtml(String(assignment?.points_possible ?? "—"))} points</p></div><em class="is-${status.tone}">${status.label === "Not submitted" ? escapeHtml(formatCourseDateTime(assignment?.due_at)) : escapeHtml(status.label)}</em></a>`; }).join("") || '<div class="cfe-collection-empty">No upcoming assignments.</div>'}</section>
       <section class="cfe-course-quick-links"><h2>Quick links</h2><div>${[["Modules", "modules", "module"], ["Grades", "grades", "grades"], ["Syllabus", "assignments/syllabus", "file"], ["People", "users", "people"]].map(([label, route, icon]) => `<a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/${route}`)}"><span>${courseGlyph(icon)}</span>${label}</a>`).join("")}</div></section></div>
-      <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${progress}%</strong></header><div class="cfe-progress-track"><i style="width:${progress}%"></i></div><p>${completed} of ${requiredCount} required items complete</p><a class="cfe-context-button" href="${escapeAttr(nextRequirementUrl)}">${courseGlyph("chart")}<span>View progress</span></a></section><section><header><h3>Course contacts</h3><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/users`)}">People</a></header>${teacher ? `<div class="cfe-contact"><i>${escapeHtml(announcementInitials(teacher?.display_name || teacher?.name || "Instructor"))}</i><div><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Instructor")}</strong><small>Course instructor</small></div></div><a class="cfe-context-inline-action" href="${escapeAttr(`${window.location.origin}/conversations?context_id=course_${courseId}`)}">${courseGlyph("message")}<span>Message instructor</span></a>` : "<p>Instructor information is available in Canvas.</p>"}</section><section><header><h3>Recent feedback</h3></header>${recentFeedback.map((assignment) => `<a href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))} points</small></a>`).join("") || '<div class="cfe-feedback-loading"><i></i><i></i><i></i><small>No recent feedback yet</small></div>'}</section><section><header><h3>Study groups</h3><span class="cfe-context-icon">${courseGlyph("people")}</span></header>${safeGroups.slice(0, 3).map((group) => `<a href="${escapeAttr(`${window.location.origin}/groups/${group.id}`)}"><strong>${escapeHtml(group?.name || "Course group")}</strong><small>${group?.members_count != null ? `${escapeHtml(String(group.members_count))} members` : "Open group"}</small></a>`).join("") || '<div class="cfe-context-empty"><strong>No groups assigned</strong><small>Your instructor has not created course groups yet.</small></div>'}</section><section class="cfe-course-tool-links"><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/calendar?context_codes[]=course_${courseId}`)}">${courseGlyph("calendar")}<span>Course calendar</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/files`)}">${courseGlyph("file")}<span>Course files</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades`)}">${courseGlyph("help")}<span>Course help</span></a></section></aside></div>`;
+      <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${progress}%</strong></header><div class="cfe-progress-track"><i style="width:${progress}%"></i></div><p>${completed} of ${requiredCount} required items complete</p><a class="cfe-context-button" href="${escapeAttr(nextRequirementUrl)}">${courseGlyph("chart")}<span>View progress</span></a></section><section><header><h3>Course contacts</h3><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/users`)}">People</a></header>${teacher ? `<div class="cfe-contact"><i>${escapeHtml(announcementInitials(teacher?.display_name || teacher?.name || "Instructor"))}</i><div><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Instructor")}</strong><small>Course instructor</small></div></div><a class="cfe-context-inline-action" href="${escapeAttr(`${window.location.origin}/conversations?context_id=course_${courseId}`)}">${courseGlyph("message")}<span>Message instructor</span></a>` : "<p>Instructor information is available in Canvas.</p>"}</section><section><header><h3>Recent feedback</h3></header>${recentFeedback.map((assignment) => `<a href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))} points</small></a>`).join("") || '<div class="cfe-feedback-loading"><i></i><i></i><i></i><small>No recent feedback yet</small></div>'}</section><section><header><h3>Study groups</h3><span class="cfe-context-icon">${courseGlyph("people")}</span></header>${safeGroups.slice(0, 3).map((group) => `<a href="${escapeAttr(`${window.location.origin}/groups/${group.id}`)}"><strong>${escapeHtml(group?.name || "Course group")}</strong><small>${group?.members_count != null ? `${escapeHtml(String(group.members_count))} members` : "Open group"}</small></a>`).join("") || '<div class="cfe-context-empty"><strong>No groups assigned</strong><small>Your instructor has not created course groups yet.</small></div>'}</section><section class="cfe-course-tool-links"><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/calendar?context_codes[]=course_${courseId}`)}">${courseGlyph("calendar")}<span>Course calendar</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/pages?quickcanvas_tab=files`)}">${courseGlyph("file")}<span>Course files</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades`)}">${courseGlyph("chart")}<span>Student grades</span></a></section></aside></div>`;
     return root;
   }
 
@@ -1191,7 +1247,93 @@
     return courseGlyph(type);
   }
 
-  function renderModulesExperience(modules, courseName) {
+  function canvasFileContentType(file) {
+    return String(
+      file?.content_type ||
+        file?.["content-type"] ||
+        file?.mime_type ||
+        file?.mime_class ||
+        "File",
+    );
+  }
+
+  function canvasFileId(file) {
+    if (file?.id != null) return String(file.id);
+    const candidate = String(file?.url || file?.html_url || "");
+    return candidate.match(/\/files\/(\d+)/)?.[1] || "";
+  }
+
+  function canvasFileDownloadHref(file) {
+    return sanitizeHref(file?.url || file?.download_url || file?.html_url || "#");
+  }
+
+  function canvasFilePreviewHref(file, courseId) {
+    if (file?.preview_url) return sanitizeHref(file.preview_url);
+    const fileId = canvasFileId(file);
+    if (fileId && courseId) {
+      return sanitizeHref(
+        `${window.location.origin}/courses/${courseId}/files/${fileId}/download?wrap=1`,
+      );
+    }
+    const rawHref = canvasFileDownloadHref(file);
+    if (rawHref === "#") return rawHref;
+    try {
+      const url = new URL(rawHref, window.location.origin);
+      url.searchParams.delete("download_frd");
+      url.searchParams.set("wrap", "1");
+      return sanitizeHref(url.toString());
+    } catch (error) {
+      return rawHref;
+    }
+  }
+
+  function moduleItemHref(item, courseId) {
+    if (String(item?.type || "").toLowerCase() === "file") {
+      return canvasFilePreviewHref(
+        {
+          id: item?.content_id,
+          url: item?.url || item?.html_url,
+          preview_url: item?.preview_url,
+        },
+        courseId,
+      );
+    }
+    return sanitizeHref(
+      item?.html_url || item?.external_url || item?.url || "#",
+    );
+  }
+
+  async function hydrateModuleItems(modules, courseId, { limit = Infinity } = {}) {
+    const rows = (Array.isArray(modules) ? modules : []).filter(Boolean);
+    const pending = rows.filter(
+      (module) =>
+        !Array.isArray(module?.items) &&
+        module?.id != null &&
+        Number(module?.items_count || 0) > 0,
+    ).slice(0, Math.max(0, Number(limit) || 0));
+    let nextIndex = 0;
+    const worker = async () => {
+      while (nextIndex < pending.length) {
+        const module = pending[nextIndex];
+        nextIndex += 1;
+        const url = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/modules/${module.id}/items`,
+        );
+        url.searchParams.set("per_page", "100");
+        url.searchParams.append("include[]", "content_details");
+        module.items = await fetchCanvasJson(url, {
+          paginate: true,
+          timeoutMs: 8_000,
+        }).catch(() => []);
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(4, pending.length) }, () => worker()),
+    );
+    return rows;
+  }
+
+  function renderModulesExperience(modules, courseName, courseId) {
     const safeModules = Array.isArray(modules) ? modules.filter(Boolean) : [];
     const root = createDataExperienceRoot({
       kind: "modules",
@@ -1209,11 +1351,11 @@
           ).length;
           return `<section class="cfe-module-card" data-cfe-module>
             <header><button type="button" data-cfe-module-toggle aria-expanded="true">${courseGlyph("chevron")}</button><div><h2>${escapeHtml(module?.name || `Module ${moduleIndex + 1}`)}</h2><p>${items.length} items${items.length ? ` · ${completed}/${items.length} complete` : ""}</p></div><span>${module?.state === "completed" ? "Complete" : module?.published === false ? "Unpublished" : "Published"}</span></header>
-            <div data-cfe-module-items>${items.length ? items.map((item) => `<a class="cfe-module-item" data-cfe-collection-row href="${escapeAttr(sanitizeHref(item?.html_url || item?.url || "#"))}"><span>${moduleItemIcon(item?.type)}</span><div><strong>${escapeHtml(item?.title || "Module item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></div><em>${item?.completion_requirement?.completed ? "Completed" : item?.completion_requirement ? "To do" : ""}</em></a>`).join("") : '<div class="cfe-collection-empty">No items in this module.</div>'}</div>
+            <div data-cfe-module-items>${items.length ? items.map((item) => `<a class="cfe-module-item" data-cfe-collection-row href="${escapeAttr(moduleItemHref(item, courseId))}"${String(item?.type || "").toLowerCase() === "externalurl" ? ' target="_blank" rel="noopener noreferrer"' : ""}><span>${moduleItemIcon(item?.type)}</span><div><strong>${escapeHtml(item?.title || "Module item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></div><em>${item?.completion_requirement?.completed ? "Completed" : item?.completion_requirement ? "To do" : ""}</em></a>`).join("") : '<div class="cfe-collection-empty">No items in this module.</div>'}</div>
           </section>`;
         })
         .join("") || '<div class="cfe-collection-empty">No modules are available yet.</div>'}</div>
-        <aside class="cfe-course-context-panel"><section><header><h3>Course status</h3><span class="is-live">Live</span></header><p>${safeModules.length} published learning modules</p><div class="cfe-progress-track"><i style="width:${safeModules.length ? Math.round((safeModules.filter((module) => module?.state === "completed").length / safeModules.length) * 100) : 0}%"></i></div></section><section><header><h3>To do</h3><span>${safeModules.flatMap((module) => module?.items || []).filter((item) => item?.completion_requirement && !item.completion_requirement.completed).length}</span></header>${safeModules.flatMap((module) => module?.items || []).filter((item) => item?.completion_requirement && !item.completion_requirement.completed).slice(0, 3).map((item) => `<a href="${escapeAttr(sanitizeHref(item?.html_url || "#"))}"><strong>${escapeHtml(item?.title || "Course item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></a>`).join("") || "<p>You're caught up.</p>"}</section><section><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}`)}">Course home</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/grades`)}">View grades</a></section></aside></div>`,
+        <aside class="cfe-course-context-panel"><section><header><h3>Course status</h3><span class="is-live">Live</span></header><p>${safeModules.length} published learning modules</p><div class="cfe-progress-track"><i style="width:${safeModules.length ? Math.round((safeModules.filter((module) => module?.state === "completed").length / safeModules.length) * 100) : 0}%"></i></div></section><section><header><h3>To do</h3><span>${safeModules.flatMap((module) => module?.items || []).filter((item) => item?.completion_requirement && !item.completion_requirement.completed).length}</span></header>${safeModules.flatMap((module) => module?.items || []).filter((item) => item?.completion_requirement && !item.completion_requirement.completed).slice(0, 3).map((item) => `<a href="${escapeAttr(moduleItemHref(item, courseId))}"><strong>${escapeHtml(item?.title || "Course item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></a>`).join("") || "<p>You're caught up.</p>"}</section><section><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}`)}">Course home</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/grades`)}">View grades</a></section></aside></div>`,
     );
     root.querySelectorAll("[data-cfe-module-toggle]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1485,7 +1627,21 @@
     return root;
   }
 
-  function renderFilesExperience(files, courseName) {
+  function formatCanvasFileSize(value) {
+    const size = Number(value);
+    if (!Number.isFinite(size) || size <= 0) return "—";
+    if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+    return `${(size / (1024 * 1024)).toFixed(size < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+  }
+
+  function courseFileRowHtml(file, courseId) {
+    const name = file?.display_name || file?.filename || "Course file";
+    const previewHref = canvasFilePreviewHref(file, courseId);
+    const downloadHref = canvasFileDownloadHref(file);
+    return `<div class="cfe-file-row" data-cfe-collection-row><a class="cfe-file-open" href="${escapeAttr(previewHref)}"><div><strong>${escapeHtml(name)}</strong><small>${escapeHtml(file?.folder_id ? `Folder ${file.folder_id}` : "Open in Canvas viewer")}</small></div></a><span>${escapeHtml(formatCanvasFileSize(file?.size))}</span><span>${escapeHtml(formatCourseDate(file?.modified_at || file?.updated_at))}</span><b title="${escapeAttr(canvasFileContentType(file))}">${escapeHtml(canvasFileContentType(file))}</b><a class="cfe-file-download" href="${escapeAttr(downloadHref)}" download aria-label="Download ${escapeAttr(name)}">Download</a></div>`;
+  }
+
+  function renderFilesExperience(files, courseName, courseId) {
     const rows = (Array.isArray(files) ? files : []).filter(Boolean);
     const root = createDataExperienceRoot({
       kind: "files",
@@ -1496,15 +1652,15 @@
     root.insertAdjacentHTML(
       "beforeend",
       `<div class="cfe-collection-controls"><label><span class="screenreader-only">Search files</span><input data-cfe-collection-search type="search" placeholder="Search course files"></label><span>${rows.length} files</span></div>
-      <section class="cfe-data-table cfe-files-table"><header><span>Name</span><span>Size</span><span>Modified</span><span>Type</span></header>${rows.map((file) => `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(file?.url || file?.preview_url || "#"))}"><div><strong>${escapeHtml(file?.display_name || file?.filename || "Course file")}</strong><small>${escapeHtml(file?.folder_id ? `Folder ${file.folder_id}` : "Course file")}</small></div><span>${escapeHtml(file?.size ? `${Math.max(1, Math.round(Number(file.size) / 1024))} KB` : "—")}</span><span>${escapeHtml(formatCourseDate(file?.modified_at || file?.updated_at))}</span><b>${escapeHtml(file?.content_type || "File")}</b></a>`).join("") || '<div class="cfe-collection-empty">No course files are available.</div>'}</section>`,
+      <section class="cfe-data-table cfe-files-table"><header><span>Name</span><span>Size</span><span>Modified</span><span>Type</span><span>Action</span></header>${rows.map((file) => courseFileRowHtml(file, courseId)).join("") || '<div class="cfe-collection-empty">No course files are available.</div>'}</section>`,
     );
     bindCollectionSearch(root, "[data-cfe-collection-row]");
     return root;
   }
 
-  function courseFileRowsHtml(files) {
+  function courseFileRowsHtml(files, courseId) {
     const rows = (Array.isArray(files) ? files : []).filter(Boolean);
-    return `<section class="cfe-data-table cfe-files-table"><header><span>Name</span><span>Size</span><span>Modified</span><span>Type</span></header>${rows.map((file) => `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(file?.url || file?.preview_url || "#"))}"><div><strong>${escapeHtml(file?.display_name || file?.filename || "Course file")}</strong><small>${escapeHtml(file?.folder_id ? `Folder ${file.folder_id}` : "Course file")}</small></div><span>${escapeHtml(file?.size ? `${Math.max(1, Math.round(Number(file.size) / 1024))} KB` : "—")}</span><span>${escapeHtml(formatCourseDate(file?.modified_at || file?.updated_at))}</span><b>${escapeHtml(file?.content_type || "File")}</b></a>`).join("") || '<div class="cfe-collection-empty">No course files are available.</div>'}</section>`;
+    return `<section class="cfe-data-table cfe-files-table"><header><span>Name</span><span>Size</span><span>Modified</span><span>Type</span><span>Action</span></header>${rows.map((file) => courseFileRowHtml(file, courseId)).join("") || '<div class="cfe-collection-empty">No course files are available.</div>'}</section>`;
   }
 
   function renderPagesExperience(pages, files, selectedPage, courseName, courseId, activeKind = "pages") {
@@ -1518,7 +1674,7 @@
     });
     root.insertAdjacentHTML(
       "beforeend",
-      `<div class="cfe-content-tabs" role="tablist"><button type="button" class="${activeKind === "pages" ? "is-active" : ""}" data-cfe-content-tab="pages">Pages <span>${rows.length}</span></button><button type="button" class="${activeKind === "files" ? "is-active" : ""}" data-cfe-content-tab="files">Files <span>${Array.isArray(files) ? files.length : 0}</span></button></div><div data-cfe-content-panel="pages" ${activeKind === "files" ? "hidden" : ""}><div class="cfe-pages-grid"><section class="cfe-page-index"><header><h2>Pages index</h2><span>${rows.length} pages</span></header><label><span class="screenreader-only">Filter pages</span><input data-cfe-collection-search placeholder="Filter pages"></label><div>${rows.map((page) => `<button type="button" data-cfe-page-url="${escapeAttr(page?.url || "")}" data-cfe-collection-row><strong>${escapeHtml(page?.title || "Course page")}</strong><small>${page?.front_page ? "Front page · " : ""}Updated ${escapeHtml(formatCourseDate(page?.updated_at))}</small><span class="cfe-page-link-icon">${courseGlyph("chevron")}</span></button>`).join("") || '<div class="cfe-collection-empty">No pages are available.</div>'}</div></section><article class="cfe-page-reader" data-cfe-page-reader></article></div></div><div data-cfe-content-panel="files" ${activeKind === "pages" ? "hidden" : ""}>${courseFileRowsHtml(files)}</div>`,
+      `<div class="cfe-content-tabs" role="tablist"><button type="button" class="${activeKind === "pages" ? "is-active" : ""}" data-cfe-content-tab="pages">Pages <span>${rows.length}</span></button><button type="button" class="${activeKind === "files" ? "is-active" : ""}" data-cfe-content-tab="files">Files <span>${Array.isArray(files) ? files.length : 0}</span></button></div><div data-cfe-content-panel="pages" ${activeKind === "files" ? "hidden" : ""}><div class="cfe-pages-grid"><section class="cfe-page-index"><header><h2>Pages index</h2><span>${rows.length} pages</span></header><label><span class="screenreader-only">Filter pages</span><input data-cfe-collection-search placeholder="Filter pages"></label><div>${rows.map((page) => `<button type="button" data-cfe-page-url="${escapeAttr(page?.url || "")}" data-cfe-collection-row><strong>${escapeHtml(page?.title || "Course page")}</strong><small>${page?.front_page ? "Front page · " : ""}Updated ${escapeHtml(formatCourseDate(page?.updated_at))}</small><span class="cfe-page-link-icon">${courseGlyph("chevron")}</span></button>`).join("") || '<div class="cfe-collection-empty">No pages are available.</div>'}</div></section><article class="cfe-page-reader" data-cfe-page-reader></article></div></div><div data-cfe-content-panel="files" ${activeKind === "pages" ? "hidden" : ""}>${courseFileRowsHtml(files, courseId)}</div>`,
     );
     const reader = root.querySelector("[data-cfe-page-reader]");
     const paintReader = (page) => {
@@ -1604,12 +1760,10 @@
         ["syllabus_body", "term", "teachers", "sections"].forEach((include) =>
           url.searchParams.append("include[]", include),
         );
-        const response = await fetch(url, {
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        root = renderSyllabusExperience(await response.json(), courseName);
+        root = renderSyllabusExperience(
+          await fetchCanvasJson(url, { ttlMs: 120_000, timeoutMs: 7_000 }),
+          courseName,
+        );
       } else if (experience === "course-home") {
         const courseUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}`);
         ["term", "teachers", "sections", "total_scores"].forEach((include) =>
@@ -1632,10 +1786,10 @@
         const groupsUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/groups`);
         groupsUrl.searchParams.set("per_page", "20");
         const secondaryRequests = [
-          fetchCanvasJson(modulesUrl, { timeoutMs: 6_000 }).catch(() => []),
-          fetchCanvasJson(assignmentsUrl, { timeoutMs: 6_000 }).catch(() => []),
-          fetchCanvasJson(announcementsUrl, { timeoutMs: 6_000 }).catch(() => []),
-          fetchCanvasJson(groupsUrl, { timeoutMs: 6_000 }).catch(() => []),
+          fetchCanvasJson(modulesUrl, { timeoutMs: 6_000, paginate: true }).catch(() => []),
+          fetchCanvasJson(assignmentsUrl, { timeoutMs: 6_000, paginate: true }).catch(() => []),
+          fetchCanvasJson(announcementsUrl, { timeoutMs: 6_000, paginate: true }).catch(() => []),
+          fetchCanvasJson(groupsUrl, { timeoutMs: 6_000, paginate: true }).catch(() => []),
         ];
         const [course, courseProgress] = await Promise.all([
           fetchCanvasJson(courseUrl, { ttlMs: 120_000, timeoutMs: 7_000 }),
@@ -1658,9 +1812,10 @@
         );
         loading.replaceWith(root);
         const initialRoot = root;
-        const [modules, assignments, announcements, groups] = await Promise.all(
+        const [moduleRows, assignments, announcements, groups] = await Promise.all(
           secondaryRequests,
         );
+        const modules = await hydrateModuleItems(moduleRows, courseId, { limit: 1 });
         if (requestId !== courseExperienceRequestId) return;
         root = renderCourseHomeExperience(
           course,
@@ -1684,7 +1839,7 @@
           url.searchParams.set("exclude_announcements", "true");
         }
         url.searchParams.set("per_page", "50");
-        const topics = await fetchCanvasJson(url);
+        const topics = await fetchCanvasJson(url, { paginate: true });
         const selectedId = path.match(/\/(?:announcements|discussion_topics)\/(\d+)/)?.[1] || "";
         root =
           experience === "announcements"
@@ -1696,7 +1851,9 @@
         );
         url.searchParams.set("per_page", "50");
         url.searchParams.append("include[]", "items");
-        root = renderModulesExperience(await fetchCanvasJson(url), courseName);
+        const modules = await fetchCanvasJson(url, { paginate: true });
+        await hydrateModuleItems(modules, courseId);
+        root = renderModulesExperience(modules, courseName, courseId);
       } else if (
         experience === "assignments" ||
         experience === "grades"
@@ -1711,8 +1868,8 @@
         );
         groupsUrl.searchParams.set("per_page", "50");
         const [assignments, groups] = await Promise.all([
-          fetchCanvasJson(assignmentsUrl),
-          fetchCanvasJson(groupsUrl).catch(() => []),
+          fetchCanvasJson(assignmentsUrl, { paginate: true }),
+          fetchCanvasJson(groupsUrl, { paginate: true }).catch(() => []),
         ]);
         if (experience === "grades") {
           root = renderGradesExperience(assignments, groups, courseName);
@@ -1728,8 +1885,8 @@
         const groupsUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/groups`);
         groupsUrl.searchParams.set("per_page", "50");
         const [people, groups] = await Promise.all([
-          fetchCanvasJson(url),
-          fetchCanvasJson(groupsUrl).catch(() => []),
+          fetchCanvasJson(url, { paginate: true }),
+          fetchCanvasJson(groupsUrl, { paginate: true }).catch(() => []),
         ]);
         root = renderPeopleExperience(people, groups, courseName);
       } else if (experience === "quizzes") {
@@ -1737,7 +1894,10 @@
           `${window.location.origin}/api/v1/courses/${courseId}/quizzes`,
         );
         url.searchParams.set("per_page", "100");
-        root = renderQuizzesExperience(await fetchCanvasJson(url), courseName);
+        root = renderQuizzesExperience(
+          await fetchCanvasJson(url, { paginate: true }),
+          courseName,
+        );
       } else if (experience === "pages" || experience === "files") {
         const url = new URL(
           `${window.location.origin}/api/v1/courses/${courseId}/pages`,
@@ -1751,8 +1911,8 @@
         filesUrl.searchParams.set("sort", "name");
         filesUrl.searchParams.set("order", "asc");
         const [pages, files] = await Promise.all([
-          fetchCanvasJson(url).catch(() => []),
-          fetchCanvasJson(filesUrl).catch(() => []),
+          fetchCanvasJson(url, { paginate: true }).catch(() => []),
+          fetchCanvasJson(filesUrl, { paginate: true }).catch(() => []),
         ]);
         let selectedPage = null;
         const routePageUrl = decodeURIComponent(
@@ -1906,6 +2066,15 @@
       const courseId = getCourseIdFromPath(window.location.pathname);
       if (homeLink && courseId) {
         homeLink.href = `${window.location.origin}/courses/${courseId}?quickcanvas_home=1`;
+      }
+      const filesLink = Array.from(sectionTabs.querySelectorAll("a[href]")).find(
+        (link) => String(link.textContent || "").trim().toLowerCase() === "files",
+      );
+      if (filesLink && courseId) {
+        // Some institutions disable Canvas's native Files page, causing /files
+        // to redirect to Course Home. Pages remains a stable Canvas route, so
+        // QuickCanvas uses it as the host for its combined Pages & Files view.
+        filesLink.href = `${window.location.origin}/courses/${courseId}/pages?quickcanvas_tab=files`;
       }
       const navHost = sectionTabs.parentElement || leftSide;
       const identities = Array.from(
@@ -3763,7 +3932,7 @@
             <a class="cfe-quick-link" href="/courses/${courseId}/modules">Modules</a>
             <a class="cfe-quick-link" href="/courses/${courseId}/assignments">Assignments</a>
             <a class="cfe-quick-link" href="/courses/${courseId}/grades">Grades</a>
-            <a class="cfe-quick-link" href="/courses/${courseId}/syllabus">Syllabus</a>
+            <a class="cfe-quick-link" href="/courses/${courseId}/assignments/syllabus">Syllabus</a>
             <a class="cfe-quick-link" href="/courses/${courseId}/discussion_topics">Discussions</a>
           </div>
         </section>
@@ -7021,45 +7190,63 @@
           url.searchParams.set(key, value);
         }
       });
-      const response = await fetch(url.toString(), {
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
-        },
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12_000);
+      let nextUrl = url.toString();
+      let pages = 0;
+      const collection = [];
+      try {
+        while (nextUrl && pages < 8) {
+          const response = await fetch(nextUrl, {
+            credentials: "include",
+            headers: { Accept: "application/json" },
+            signal: controller.signal,
+          });
 
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error(
-            "Canvas session unavailable. Sign in to Canvas, then reload this page.",
-          );
-        }
-        if (response.status === 404) {
-          throw new Error(
-            "API endpoint not found. Check your Canvas base URL.",
-          );
-        }
+          if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+              throw new Error(
+                "Canvas session unavailable. Sign in to Canvas, then reload this page.",
+              );
+            }
+            if (response.status === 404) {
+              throw new Error(
+                "API endpoint not found. Check your Canvas base URL.",
+              );
+            }
+            const contentType = response.headers.get("content-type") || "";
+            let message = "";
+            if (contentType.includes("application/json")) {
+              const data = await response.json().catch(() => null);
+              message = data?.message || data?.errors?.[0]?.message || "";
+            } else {
+              message = await response.text().catch(() => "");
+            }
+            const cleaned = message.replace(/<[^>]+>/g, "").trim();
+            throw new Error(cleaned || `Request failed: ${response.status}`);
+          }
 
-        const contentType = response.headers.get("content-type") || "";
-        let message = "";
-        if (contentType.includes("application/json")) {
-          const data = await response.json().catch(() => null);
-          message = data?.message || data?.errors?.[0]?.message || "";
-        } else {
-          message = await response.text().catch(() => "");
+          const contentType = response.headers.get("content-type") || "";
+          if (!contentType.includes("application/json")) {
+            throw new Error(
+              "Unexpected response. Check your Canvas URL and make sure you are signed in.",
+            );
+          }
+          const data = await response.json();
+          if (!Array.isArray(data)) return data;
+          collection.push(...data);
+          nextUrl = resolveNextCanvasLink(response.headers.get("link"));
+          pages += 1;
         }
-        const cleaned = message.replace(/<[^>]+>/g, "").trim();
-        throw new Error(cleaned || `Request failed: ${response.status}`);
+        return collection;
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          throw new Error("Canvas took too long to respond. Reload and try again.");
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        throw new Error(
-          "Unexpected response. Check your Canvas URL and make sure you are signed in.",
-        );
-      }
-
-      return response.json();
     }
 
     async function cachedCanvasFetch(

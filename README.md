@@ -9,7 +9,7 @@ Canvas OAuth is still the supported option for a standalone or multi-school
 service. It requires an administrator-enabled Developer Key and a trusted
 backend for the client secret; never embed that secret in this extension.
 
-Version 0.8.8 implements the approved Superdesign course workspace as a
+Version 0.9.11 implements the approved Superdesign course workspace as a
 structural Canvas adapter rather than a generic skin. Native routes now use the
 same 80px global rail, 208px course rail, 48px breadcrumb bar, content bounds,
 page hierarchy, and compact card system as the reference. Panopto and other LTI
@@ -29,7 +29,10 @@ if a school blocks a session endpoint. Course Home now follows the approved
 editorial workspace with progress, announcements, due work, contacts, and
 quick links. Modules, Assignments, Grades, People, Discussions, and the unified
 Pages/Files workspace include the corresponding reference controls, status
-panels, filters, and responsive structures.
+panels, filters, and responsive structures. Office documents and module-file
+items open through Canvas's native viewer with an explicit download fallback;
+hidden Files routes, omitted module items, paginated lists, and slow Canvas
+responses are handled without trapping or truncating the interface.
 
 - `extension/` contains the browser extension source.
 - `ad-kit/` contains the TikTok ad project and recording scripts.
