@@ -168,7 +168,11 @@ async function runCase(browser, url, activeSection, options = {}) {
     }
     const collectionFixtures = {
       "/api/v1/courses/10585/modules": [
-        { id: 1, name: "Limits", published: true, items: [{ id: 11, title: "Limits overview", type: "Page", html_url: "https://canvas.test/courses/10585/pages/limits" }] },
+        { id: 1, name: "Limits", published: true, items: [
+          { id: 11, title: "Limits overview", type: "Page", html_url: "https://canvas.test/courses/10585/pages/limits" },
+          { id: 12, content_id: 7, title: "Chapter review", type: "Assignment", html_url: "https://canvas.test/courses/10585/assignments/7" },
+          { id: 13, content_id: 8, title: "Practice set", type: "Assignment", html_url: "https://canvas.test/courses/10585/assignments/8" },
+        ] },
         { id: 2, name: "Course resources", published: true, items_count: 2 },
       ],
       "/api/v1/courses/10585/modules/2/items": [
@@ -176,7 +180,10 @@ async function runCase(browser, url, activeSection, options = {}) {
         { id: 22, title: "External practice", type: "ExternalUrl", external_url: "https://example.edu/practice" },
       ],
       "/api/v1/courses/10585/assignment_groups": [{ id: 4, name: "Practice" }],
-      "/api/v1/courses/10585/assignments": [{ id: 7, name: "Chapter review", assignment_group_id: 4, due_at: "2026-09-08T13:00:00Z", points_possible: 20, submission_types: ["online_upload"], html_url: "https://canvas.test/courses/10585/assignments/7", submission: { workflow_state: "graded", score: 18, grade: "18" } }],
+      "/api/v1/courses/10585/assignments": [
+        { id: 7, name: "Chapter review", assignment_group_id: 4, due_at: "2026-09-08T13:00:00Z", points_possible: 20, submission_types: ["online_upload"], html_url: "https://canvas.test/courses/10585/assignments/7", submission: { workflow_state: "graded", score: 18, grade: "18" } },
+        { id: 8, name: "Practice set", assignment_group_id: 4, due_at: "2026-09-09T13:00:00Z", points_possible: 10, submission_types: ["online_upload"], html_url: "https://canvas.test/courses/10585/assignments/8", submission: { workflow_state: "unsubmitted" } },
+      ],
       "/api/v1/courses/10585/users": [{ id: 9, display_name: "Ada Student", sortable_name: "Student, Ada", enrollments: [{ type: "StudentEnrollment", enrollment_state: "active", course_section_id: 3 }] }],
       "/api/v1/courses/10585/quizzes": [{ id: 10, title: "Limits check", due_at: "2026-09-10T13:00:00Z", question_count: 8, points_possible: 10, html_url: "https://canvas.test/courses/10585/quizzes/10" }],
       "/api/v1/courses/10585/files": [
@@ -415,6 +422,18 @@ async function runCase(browser, url, activeSection, options = {}) {
       moduleItemHrefs: Array.from(
         document.querySelectorAll(".cfe-module-item"),
       ).map((node) => node.getAttribute("href")),
+      moduleProgressPercent: document.querySelector(
+        ".cfe-modules-experience .cfe-course-context-panel section:first-child header strong",
+      )?.textContent,
+      moduleProgressText: document.querySelector(
+        ".cfe-modules-experience .cfe-course-context-panel section:first-child p",
+      )?.textContent,
+      moduleHeaderProgress: document.querySelector(
+        ".cfe-module-card header p",
+      )?.textContent,
+      moduleItemStatuses: Array.from(
+        document.querySelectorAll(".cfe-module-item em"),
+      ).map((node) => node.textContent),
       filePreviewHrefs: Array.from(
         document.querySelectorAll(".cfe-file-open"),
       ).map((node) => node.getAttribute("href")),
@@ -581,6 +600,11 @@ async function runCase(browser, url, activeSection, options = {}) {
       );
       if (section === "Modules") {
         assert.equal(current.moduleCollapsed, true, "Modules: collapse control failed");
+        assert.equal(current.moduleProgressPercent, "50%", "Modules: submission progress was ignored");
+        assert.equal(current.moduleProgressText, "1 of 2 tracked items complete");
+        assert.equal(current.moduleHeaderProgress, "3 items · 1/2 tracked complete");
+        assert.ok(current.moduleItemStatuses.includes("Submitted"));
+        assert.ok(current.moduleItemStatuses.includes("To do"));
         assert.ok(
           current.moduleItemHrefs.includes(
             "https://canvas.test/courses/10585/files/13/download?wrap=1",

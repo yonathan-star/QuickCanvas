@@ -1,5 +1,5 @@
 ﻿(() => {
-  const CONTENT_BUILD = "0.9.12";
+  const CONTENT_BUILD = "0.9.13";
   const scriptInstanceId = `cfe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   window.__cfeActiveInstanceId = scriptInstanceId;
   document.documentElement.dataset.cfeBuild = CONTENT_BUILD;
@@ -1366,20 +1366,84 @@
     return rows;
   }
 
+  function submissionIsComplete(submission) {
+    const workflow = String(submission?.workflow_state || "").toLowerCase();
+    return (
+      Boolean(submission?.submitted_at) ||
+      Boolean(submission?.graded_at) ||
+      ["submitted", "graded", "complete"].includes(workflow)
+    );
+  }
+
+  function enrichModuleItemsWithAssignments(
+    modules,
+    assignments,
+    courseId,
+    manualCompletions = {},
+  ) {
+    const assignmentMap = new Map();
+    (Array.isArray(assignments) ? assignments : []).forEach((assignment) => {
+      if (assignment?.id != null) {
+        assignmentMap.set(`assignment:${assignment.id}`, assignment);
+      }
+      if (assignment?.quiz_id != null) {
+        assignmentMap.set(`quiz:${assignment.quiz_id}`, assignment);
+      }
+    });
+    (Array.isArray(modules) ? modules : []).forEach((module) => {
+      (Array.isArray(module?.items) ? module.items : []).forEach((item) => {
+        const type = String(item?.type || "").toLowerCase();
+        const key = type === "quiz"
+          ? `quiz:${item?.content_id}`
+          : `assignment:${item?.content_id}`;
+        const assignment = assignmentMap.get(key);
+        if (!assignment) return;
+        item._cfeSubmission = assignment.submission || null;
+        item._cfeAssignmentId = assignment.id;
+        item._cfeManualCompleted = Boolean(
+          manualCompletions?.[`${courseId}:${assignment.id}`],
+        );
+      });
+    });
+    return modules;
+  }
+
+  function moduleItemIsTrackable(item) {
+    const type = String(item?.type || "").toLowerCase();
+    return Boolean(
+      item?.completion_requirement ||
+        item?._cfeAssignmentId != null ||
+        type === "assignment" ||
+        type === "quiz",
+    );
+  }
+
+  function moduleItemIsComplete(item) {
+    return Boolean(
+      item?.completion_requirement?.completed ||
+        item?._cfeManualCompleted ||
+        submissionIsComplete(item?._cfeSubmission),
+    );
+  }
+
+  function moduleItemCompletionLabel(item) {
+    if (!moduleItemIsTrackable(item)) return "";
+    if (!moduleItemIsComplete(item)) return "To do";
+    if (
+      !item?.completion_requirement?.completed &&
+      submissionIsComplete(item?._cfeSubmission)
+    ) {
+      return "Submitted";
+    }
+    return "Completed";
+  }
+
   function renderModulesExperience(modules, courseName, courseId) {
     const safeModules = Array.isArray(modules) ? modules.filter(Boolean) : [];
     const moduleItems = safeModules.flatMap((module) => module?.items || []);
-    const requiredItems = moduleItems.filter((item) => item?.completion_requirement);
-    const completedRequiredItems = requiredItems.filter(
-      (item) => item?.completion_requirement?.completed,
-    ).length;
-    const completedModules = safeModules.filter(
-      (module) => module?.state === "completed",
-    ).length;
-    const moduleProgressTotal = requiredItems.length || safeModules.length;
-    const moduleProgressDone = requiredItems.length
-      ? completedRequiredItems
-      : completedModules;
+    const trackedItems = moduleItems.filter(moduleItemIsTrackable);
+    const moduleProgressTotal = trackedItems.length;
+    const moduleProgressDone = trackedItems.filter(moduleItemIsComplete).length;
     const moduleProgressPercent = moduleProgressTotal
       ? Math.round((moduleProgressDone / moduleProgressTotal) * 100)
       : 0;
@@ -1394,16 +1458,15 @@
       `<div class="cfe-module-workspace"><div class="cfe-module-list">${safeModules
         .map((module, moduleIndex) => {
           const items = Array.isArray(module?.items) ? module.items : [];
-          const completed = items.filter(
-            (item) => item?.completion_requirement?.completed,
-          ).length;
+          const tracked = items.filter(moduleItemIsTrackable);
+          const completed = tracked.filter(moduleItemIsComplete).length;
           return `<section class="cfe-module-card" data-cfe-module>
-            <header><button type="button" data-cfe-module-toggle aria-expanded="true">${courseGlyph("chevron")}</button><div><h2>${escapeHtml(module?.name || `Module ${moduleIndex + 1}`)}</h2><p>${items.length} items${items.length ? ` · ${completed}/${items.length} complete` : ""}</p></div><span>${module?.state === "completed" ? "Complete" : module?.published === false ? "Unpublished" : "Published"}</span></header>
-            <div data-cfe-module-items>${items.length ? items.map((item) => `<a class="cfe-module-item" data-cfe-collection-row href="${escapeAttr(moduleItemHref(item, courseId))}"${String(item?.type || "").toLowerCase() === "externalurl" ? ' target="_blank" rel="noopener noreferrer"' : ""}><span>${moduleItemIcon(item?.type)}</span><div><strong>${escapeHtml(item?.title || "Module item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></div><em>${item?.completion_requirement?.completed ? "Completed" : item?.completion_requirement ? "To do" : ""}</em></a>`).join("") : '<div class="cfe-collection-empty">No items in this module.</div>'}</div>
+            <header><button type="button" data-cfe-module-toggle aria-expanded="true">${courseGlyph("chevron")}</button><div><h2>${escapeHtml(module?.name || `Module ${moduleIndex + 1}`)}</h2><p>${items.length} items${tracked.length ? ` · ${completed}/${tracked.length} tracked complete` : " · No tracked requirements"}</p></div><span>${module?.state === "completed" ? "Complete" : module?.published === false ? "Unpublished" : "Published"}</span></header>
+            <div data-cfe-module-items>${items.length ? items.map((item) => `<a class="cfe-module-item" data-cfe-collection-row href="${escapeAttr(moduleItemHref(item, courseId))}"${String(item?.type || "").toLowerCase() === "externalurl" ? ' target="_blank" rel="noopener noreferrer"' : ""}><span>${moduleItemIcon(item?.type)}</span><div><strong>${escapeHtml(item?.title || "Module item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></div><em>${escapeHtml(moduleItemCompletionLabel(item))}</em></a>`).join("") : '<div class="cfe-collection-empty">No items in this module.</div>'}</div>
           </section>`;
         })
         .join("") || '<div class="cfe-collection-empty">No modules are available yet.</div>'}</div>
-        <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${moduleProgressPercent}%</strong></header><p>${moduleProgressDone} of ${moduleProgressTotal} ${requiredItems.length ? "required items" : "modules"} complete</p><div class="cfe-progress-track"><i style="width:${moduleProgressPercent}%"></i></div></section><section><header><h3>To do</h3><span>${moduleItems.filter((item) => item?.completion_requirement && !item.completion_requirement.completed).length}</span></header>${moduleItems.filter((item) => item?.completion_requirement && !item.completion_requirement.completed).slice(0, 3).map((item) => `<a href="${escapeAttr(moduleItemHref(item, courseId))}"><strong>${escapeHtml(item?.title || "Course item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></a>`).join("") || "<p>You're caught up.</p>"}</section><section><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}`)}">Course home</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/grades`)}">View grades</a></section></aside></div>`,
+        <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${moduleProgressTotal ? `${moduleProgressPercent}%` : "—"}</strong></header><p>${moduleProgressTotal ? `${moduleProgressDone} of ${moduleProgressTotal} tracked items complete` : "No completion requirements are configured"}</p><div class="cfe-progress-track"><i style="width:${moduleProgressPercent}%"></i></div></section><section><header><h3>To do</h3><span>${trackedItems.filter((item) => !moduleItemIsComplete(item)).length}</span></header>${trackedItems.filter((item) => !moduleItemIsComplete(item)).slice(0, 3).map((item) => `<a href="${escapeAttr(moduleItemHref(item, courseId))}"><strong>${escapeHtml(item?.title || "Course item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></a>`).join("") || "<p>You're caught up.</p>"}</section><section><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}`)}">Course home</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/grades`)}">View grades</a></section></aside></div>`,
     );
     root.querySelectorAll("[data-cfe-module-toggle]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1904,8 +1967,26 @@
         );
         url.searchParams.set("per_page", "50");
         url.searchParams.append("include[]", "items");
-        const modules = await fetchCanvasJson(url, { paginate: true });
+        url.searchParams.append("include[]", "content_details");
+        const assignmentsUrl = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/assignments`,
+        );
+        assignmentsUrl.searchParams.set("per_page", "100");
+        assignmentsUrl.searchParams.append("include[]", "submission");
+        const [modules, assignments, completionStorage] = await Promise.all([
+          fetchCanvasJson(url, { paginate: true }),
+          fetchCanvasJson(assignmentsUrl, { paginate: true }).catch(() => []),
+          chrome.storage.sync
+            .get("cfeManualCompletions")
+            .catch(() => ({ cfeManualCompletions: {} })),
+        ]);
         await hydrateModuleItems(modules, courseId);
+        enrichModuleItemsWithAssignments(
+          modules,
+          assignments,
+          courseId,
+          completionStorage?.cfeManualCompletions || {},
+        );
         root = renderModulesExperience(modules, courseName, courseId);
       } else if (
         experience === "assignments" ||
