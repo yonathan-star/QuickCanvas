@@ -37,15 +37,19 @@ const fixture = `<!doctype html><html><head><title>Syllabus · Biology</title><s
     await page.route("https://canvas.test/**", async (route) => {
       const url = new URL(route.request().url());
       if (!url.pathname.startsWith("/api/v1/")) return route.fulfill({ contentType: "text/html", body: fixture });
-      if (url.pathname === "/api/v1/courses/1") {
-        return route.fulfill({ contentType: "application/json", body: JSON.stringify({ id: 1, name: "Biology", course_code: "BIO 101" }) });
+      if (/^\/api\/v1\/courses\/\d+$/.test(url.pathname)) {
+        const courseId = url.pathname.split("/").pop();
+        return route.fulfill({ contentType: "application/json", body: JSON.stringify({ id: Number(courseId), name: "Biology", course_code: "BIO 101" }) });
       }
       if (url.pathname.endsWith("/users/self/progress")) {
-        return route.fulfill({ contentType: "application/json", body: JSON.stringify({ requirement_count: 10, requirement_completed_count: 4, next_requirement_url: "https://canvas.test/courses/1/modules/items/8" }) });
+        const unconfigured = url.pathname.includes("/courses/2/");
+        return route.fulfill({ contentType: "application/json", body: JSON.stringify(unconfigured
+          ? { requirement_count: 0, requirement_completed_count: 0 }
+          : { requirement_count: 10, requirement_completed_count: 4, next_requirement_url: "https://canvas.test/courses/1/modules/items/8" }) });
       }
       await new Promise((resolve) => setTimeout(resolve, 1800));
       const body = url.pathname.endsWith("/assignments")
-        ? [{ id: 9, name: "Field notes", due_at: new Date(Date.now() + 86400000).toISOString(), html_url: "https://canvas.test/courses/1/assignments/9" }]
+        ? [{ id: 9, name: "Field notes", due_at: new Date(Date.now() + 86400000).toISOString(), html_url: "https://canvas.test/courses/1/assignments/9", submission: url.pathname.includes("/courses/2/") ? { workflow_state: "graded", graded_at: new Date().toISOString() } : {} }]
         : [];
       return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
     });
@@ -60,6 +64,19 @@ const fixture = `<!doctype html><html><head><title>Syllabus · Biology</title><s
     assert.equal(await page.locator(".cfe-course-home-experience").count(), 1);
     await page.getByText("Field notes", { exact: true }).waitFor({ timeout: 4000 });
     assert.equal(await page.locator(".cfe-course-home-experience").count(), 1);
+
+    await page.goto("https://canvas.test/courses/2");
+    await page.addScriptTag({ content: script });
+    await page.getByText("Field notes", { exact: true }).waitFor({ timeout: 4000 });
+    assert.equal(
+      await page.locator(".cfe-course-context-panel section:first-child header strong").textContent(),
+      "100%",
+      "assignment completion fallback did not replace an unconfigured module progress value",
+    );
+    assert.equal(
+      await page.locator(".cfe-course-context-panel section:first-child p").textContent(),
+      "1 of 1 tracked assignments complete",
+    );
     console.log("Course Home routing, progress, and staged-loading checks passed.");
   } finally {
     await browser.close();

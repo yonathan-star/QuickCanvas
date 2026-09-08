@@ -33,7 +33,7 @@ function fixture(activeSection, duplicateCount = 6) {
         <li><a href="/courses/10585">AP Calculus AB Per C-1233-ALL-Kibler</a></li>
         <li class="ic-app-crumbs__crumb--current">${activeSection}</li>
       </ol></div>
-      <div class="ic-Layout-columns">
+      <div id="application" class="ic-app"><div id="not_right_side" class="ic-app-main-content"><div class="ic-Layout-columns">
         <aside id="left-side"><div class="course-navigation">${identities}
           <ul id="section-tabs">
             ${sections.map((section) => `<li class="section ${activeSection === section ? "active" : ""}"><a href="/courses/10585/${section === "Home" ? "" : section.toLowerCase()}">${section}</a></li>`).join("")}
@@ -47,7 +47,7 @@ function fixture(activeSection, duplicateCount = 6) {
           </main>
           <aside id="right-side"><section id="cfe-course-widget-board">Wrong home widgets</section></aside>
         </div>
-      </div>
+      </div></div></div>
     </body></html>`;
 }
 
@@ -330,6 +330,9 @@ async function runCase(browser, url, activeSection, options = {}) {
       title: document.querySelector("#content h1")?.textContent,
       contentWrapperBackground: getComputedStyle(
         document.querySelector(".ic-Layout-contentWrapper"),
+      ).backgroundColor,
+      mainAppBackground: getComputedStyle(
+        document.querySelector(".ic-app-main-content"),
       ).backgroundColor,
       hasWrongHomeWidgets: Boolean(
         document.querySelector("#cfe-course-widget-board"),
@@ -672,6 +675,13 @@ async function runCase(browser, url, activeSection, options = {}) {
       } else {
         assert.equal(current.adaptedHeaderCount, 1, `${section}: header adapter repeated`);
         assert.equal(current.adaptedCopyCount, 1, `${section}: header copy repeated`);
+        if (/^(Assignments|Discussions)$/.test(section)) {
+          assert.equal(
+            current.mainAppBackground,
+            "rgb(255, 255, 255)",
+            `${section}: themed layout strip leaked beside the native content`,
+          );
+        }
       }
     }
 

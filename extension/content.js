@@ -1,5 +1,5 @@
 ﻿(() => {
-  const CONTENT_BUILD = "0.9.11";
+  const CONTENT_BUILD = "0.9.12";
   const scriptInstanceId = `cfe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   window.__cfeActiveInstanceId = scriptInstanceId;
   document.documentElement.dataset.cfeBuild = CONTENT_BUILD;
@@ -1178,7 +1178,17 @@
     return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths}</svg>`;
   }
 
-  function renderCourseHomeExperience(course, modules, assignments, announcements, groups, courseName, courseId, courseProgress = null) {
+  function renderCourseHomeExperience(
+    course,
+    modules,
+    assignments,
+    announcements,
+    groups,
+    courseName,
+    courseId,
+    courseProgress = null,
+    manualCompletions = {},
+  ) {
     const safeModules = Array.isArray(modules) ? modules.filter(Boolean) : [];
     const safeAssignments = (Array.isArray(assignments) ? assignments : [])
       .filter(Boolean)
@@ -1191,11 +1201,34 @@
     const allItems = safeModules.flatMap((module) => module?.items || []);
     const required = allItems.filter((item) => item?.completion_requirement);
     const fallbackCompleted = required.filter((item) => item?.completion_requirement?.completed).length;
+    const trackedAssignments = safeAssignments.filter((assignment) => assignment?.id != null);
+    const completedAssignments = trackedAssignments.filter((assignment) => {
+      const submission = assignment?.submission || {};
+      const workflow = String(submission?.workflow_state || "").toLowerCase();
+      return (
+        Boolean(submission?.submitted_at) ||
+        Boolean(submission?.graded_at) ||
+        ["submitted", "graded", "complete"].includes(workflow) ||
+        Boolean(manualCompletions?.[`${courseId}:${assignment.id}`])
+      );
+    }).length;
     const apiRequired = Number(courseProgress?.requirement_count);
     const apiCompleted = Number(courseProgress?.requirement_completed_count);
-    const hasApiProgress = Number.isFinite(apiRequired) && apiRequired >= 0 && Number.isFinite(apiCompleted) && apiCompleted >= 0;
-    const requiredCount = hasApiProgress ? apiRequired : required.length;
-    const completed = hasApiProgress ? Math.min(apiCompleted, requiredCount) : fallbackCompleted;
+    const hasApiProgress = Number.isFinite(apiRequired) && apiRequired > 0 && Number.isFinite(apiCompleted) && apiCompleted >= 0;
+    const hasModuleProgress = required.length > 0;
+    const requiredCount = hasApiProgress
+      ? apiRequired
+      : hasModuleProgress
+        ? required.length
+        : trackedAssignments.length;
+    const completed = hasApiProgress
+      ? Math.min(apiCompleted, requiredCount)
+      : hasModuleProgress
+        ? fallbackCompleted
+        : completedAssignments;
+    const progressUnit = hasApiProgress || hasModuleProgress
+      ? "required items"
+      : "tracked assignments";
     const progress = requiredCount ? Math.round((completed / requiredCount) * 100) : 0;
     const nextRequirementUrl = sanitizeHref(
       courseProgress?.next_requirement_url || `${window.location.origin}/courses/${courseId}/modules`,
@@ -1225,7 +1258,7 @@
       <section class="cfe-course-home-card"><header><div><h2>Recent announcements</h2><p>Updates from your instructor</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/announcements`)}">View all</a></header>${safeAnnouncements.slice(0, 2).map((topic) => `<a class="cfe-course-home-row" href="${escapeAttr(sanitizeHref(topic?.html_url || `${window.location.origin}/courses/${courseId}/announcements`))}"><i class="${topic?.read_state === "read" ? "" : "is-unread"}"></i><div><strong>${escapeHtml(topic?.title || "Course announcement")}</strong><p>${escapeHtml(plainTextFromHtml(topic?.message).slice(0, 150))}</p><small>${escapeHtml(announcementAuthorName(topic))} · ${escapeHtml(formatCourseDate(topic?.posted_at || topic?.created_at))}</small></div></a>`).join("") || `<div class="cfe-course-home-empty"><span>${courseGlyph("message")}</span><div><strong>You’re all caught up</strong><p>No recent announcements from your instructor.</p></div></div>`}</section>
       <section class="cfe-course-home-card"><header><div><h2>Due soon</h2><p>Your upcoming course work</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/assignments`)}">All assignments</a></header>${dueSoon.map((assignment) => { const status = assignmentStatus(assignment); return `<a class="cfe-course-home-row is-assignment" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><span>${moduleItemIcon((assignment?.submission_types || [])[0] || "assignment")}</span><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><p>${escapeHtml(String(assignment?.points_possible ?? "—"))} points</p></div><em class="is-${status.tone}">${status.label === "Not submitted" ? escapeHtml(formatCourseDateTime(assignment?.due_at)) : escapeHtml(status.label)}</em></a>`; }).join("") || '<div class="cfe-collection-empty">No upcoming assignments.</div>'}</section>
       <section class="cfe-course-quick-links"><h2>Quick links</h2><div>${[["Modules", "modules", "module"], ["Grades", "grades", "grades"], ["Syllabus", "assignments/syllabus", "file"], ["People", "users", "people"]].map(([label, route, icon]) => `<a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/${route}`)}"><span>${courseGlyph(icon)}</span>${label}</a>`).join("")}</div></section></div>
-      <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${progress}%</strong></header><div class="cfe-progress-track"><i style="width:${progress}%"></i></div><p>${completed} of ${requiredCount} required items complete</p><a class="cfe-context-button" href="${escapeAttr(nextRequirementUrl)}">${courseGlyph("chart")}<span>View progress</span></a></section><section><header><h3>Course contacts</h3><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/users`)}">People</a></header>${teacher ? `<div class="cfe-contact"><i>${escapeHtml(announcementInitials(teacher?.display_name || teacher?.name || "Instructor"))}</i><div><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Instructor")}</strong><small>Course instructor</small></div></div><a class="cfe-context-inline-action" href="${escapeAttr(`${window.location.origin}/conversations?context_id=course_${courseId}`)}">${courseGlyph("message")}<span>Message instructor</span></a>` : "<p>Instructor information is available in Canvas.</p>"}</section><section><header><h3>Recent feedback</h3></header>${recentFeedback.map((assignment) => `<a href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))} points</small></a>`).join("") || '<div class="cfe-feedback-loading"><i></i><i></i><i></i><small>No recent feedback yet</small></div>'}</section><section><header><h3>Study groups</h3><span class="cfe-context-icon">${courseGlyph("people")}</span></header>${safeGroups.slice(0, 3).map((group) => `<a href="${escapeAttr(`${window.location.origin}/groups/${group.id}`)}"><strong>${escapeHtml(group?.name || "Course group")}</strong><small>${group?.members_count != null ? `${escapeHtml(String(group.members_count))} members` : "Open group"}</small></a>`).join("") || '<div class="cfe-context-empty"><strong>No groups assigned</strong><small>Your instructor has not created course groups yet.</small></div>'}</section><section class="cfe-course-tool-links"><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/calendar?context_codes[]=course_${courseId}`)}">${courseGlyph("calendar")}<span>Course calendar</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/pages?quickcanvas_tab=files`)}">${courseGlyph("file")}<span>Course files</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades`)}">${courseGlyph("chart")}<span>Student grades</span></a></section></aside></div>`;
+      <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${progress}%</strong></header><div class="cfe-progress-track"><i style="width:${progress}%"></i></div><p>${completed} of ${requiredCount} ${progressUnit} complete</p><a class="cfe-context-button" href="${escapeAttr(nextRequirementUrl)}">${courseGlyph("chart")}<span>View progress</span></a></section><section><header><h3>Course contacts</h3><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/users`)}">People</a></header>${teacher ? `<div class="cfe-contact"><i>${escapeHtml(announcementInitials(teacher?.display_name || teacher?.name || "Instructor"))}</i><div><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Instructor")}</strong><small>Course instructor</small></div></div><a class="cfe-context-inline-action" href="${escapeAttr(`${window.location.origin}/conversations?context_id=course_${courseId}`)}">${courseGlyph("message")}<span>Message instructor</span></a>` : "<p>Instructor information is available in Canvas.</p>"}</section><section><header><h3>Recent feedback</h3></header>${recentFeedback.map((assignment) => `<a href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))} points</small></a>`).join("") || '<div class="cfe-feedback-loading"><i></i><i></i><i></i><small>No recent feedback yet</small></div>'}</section><section><header><h3>Study groups</h3><span class="cfe-context-icon">${courseGlyph("people")}</span></header>${safeGroups.slice(0, 3).map((group) => `<a href="${escapeAttr(`${window.location.origin}/groups/${group.id}`)}"><strong>${escapeHtml(group?.name || "Course group")}</strong><small>${group?.members_count != null ? `${escapeHtml(String(group.members_count))} members` : "Open group"}</small></a>`).join("") || '<div class="cfe-context-empty"><strong>No groups assigned</strong><small>Your instructor has not created course groups yet.</small></div>'}</section><section class="cfe-course-tool-links"><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/calendar?context_codes[]=course_${courseId}`)}">${courseGlyph("calendar")}<span>Course calendar</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/pages?quickcanvas_tab=files`)}">${courseGlyph("file")}<span>Course files</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades`)}">${courseGlyph("chart")}<span>Student grades</span></a></section></aside></div>`;
     return root;
   }
 
@@ -1335,6 +1368,21 @@
 
   function renderModulesExperience(modules, courseName, courseId) {
     const safeModules = Array.isArray(modules) ? modules.filter(Boolean) : [];
+    const moduleItems = safeModules.flatMap((module) => module?.items || []);
+    const requiredItems = moduleItems.filter((item) => item?.completion_requirement);
+    const completedRequiredItems = requiredItems.filter(
+      (item) => item?.completion_requirement?.completed,
+    ).length;
+    const completedModules = safeModules.filter(
+      (module) => module?.state === "completed",
+    ).length;
+    const moduleProgressTotal = requiredItems.length || safeModules.length;
+    const moduleProgressDone = requiredItems.length
+      ? completedRequiredItems
+      : completedModules;
+    const moduleProgressPercent = moduleProgressTotal
+      ? Math.round((moduleProgressDone / moduleProgressTotal) * 100)
+      : 0;
     const root = createDataExperienceRoot({
       kind: "modules",
       eyebrow: "Course content",
@@ -1355,7 +1403,7 @@
           </section>`;
         })
         .join("") || '<div class="cfe-collection-empty">No modules are available yet.</div>'}</div>
-        <aside class="cfe-course-context-panel"><section><header><h3>Course status</h3><span class="is-live">Live</span></header><p>${safeModules.length} published learning modules</p><div class="cfe-progress-track"><i style="width:${safeModules.length ? Math.round((safeModules.filter((module) => module?.state === "completed").length / safeModules.length) * 100) : 0}%"></i></div></section><section><header><h3>To do</h3><span>${safeModules.flatMap((module) => module?.items || []).filter((item) => item?.completion_requirement && !item.completion_requirement.completed).length}</span></header>${safeModules.flatMap((module) => module?.items || []).filter((item) => item?.completion_requirement && !item.completion_requirement.completed).slice(0, 3).map((item) => `<a href="${escapeAttr(moduleItemHref(item, courseId))}"><strong>${escapeHtml(item?.title || "Course item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></a>`).join("") || "<p>You're caught up.</p>"}</section><section><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}`)}">Course home</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/grades`)}">View grades</a></section></aside></div>`,
+        <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${moduleProgressPercent}%</strong></header><p>${moduleProgressDone} of ${moduleProgressTotal} ${requiredItems.length ? "required items" : "modules"} complete</p><div class="cfe-progress-track"><i style="width:${moduleProgressPercent}%"></i></div></section><section><header><h3>To do</h3><span>${moduleItems.filter((item) => item?.completion_requirement && !item.completion_requirement.completed).length}</span></header>${moduleItems.filter((item) => item?.completion_requirement && !item.completion_requirement.completed).slice(0, 3).map((item) => `<a href="${escapeAttr(moduleItemHref(item, courseId))}"><strong>${escapeHtml(item?.title || "Course item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></a>`).join("") || "<p>You're caught up.</p>"}</section><section><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}`)}">Course home</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/grades`)}">View grades</a></section></aside></div>`,
     );
     root.querySelectorAll("[data-cfe-module-toggle]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1790,6 +1838,10 @@
           fetchCanvasJson(assignmentsUrl, { timeoutMs: 6_000, paginate: true }).catch(() => []),
           fetchCanvasJson(announcementsUrl, { timeoutMs: 6_000, paginate: true }).catch(() => []),
           fetchCanvasJson(groupsUrl, { timeoutMs: 6_000, paginate: true }).catch(() => []),
+          chrome.storage.sync
+            .get("cfeManualCompletions")
+            .then((result) => result?.cfeManualCompletions || {})
+            .catch(() => ({})),
         ];
         const [course, courseProgress] = await Promise.all([
           fetchCanvasJson(courseUrl, { ttlMs: 120_000, timeoutMs: 7_000 }),
@@ -1812,7 +1864,7 @@
         );
         loading.replaceWith(root);
         const initialRoot = root;
-        const [moduleRows, assignments, announcements, groups] = await Promise.all(
+        const [moduleRows, assignments, announcements, groups, manualCompletions] = await Promise.all(
           secondaryRequests,
         );
         const modules = await hydrateModuleItems(moduleRows, courseId, { limit: 1 });
@@ -1826,6 +1878,7 @@
           courseName,
           courseId,
           courseProgress,
+          manualCompletions,
         );
         initialRoot.replaceWith(root);
         return;
@@ -8269,6 +8322,14 @@
     }
 
     function updateWidgets() {
+      if (completionWidgetEl) {
+        renderCompletionWidget(
+          filterAssignments(
+            assignmentsCache.filter((item) => item.type === "assignment"),
+            activeFilter,
+          ),
+        );
+      }
       if (taskListEl) {
         renderDashboardTasks();
       }

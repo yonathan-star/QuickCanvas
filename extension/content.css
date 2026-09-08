@@ -5274,6 +5274,17 @@ body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-deta
     min-width: 0 !important;
     margin: 0 auto !important;
     gap: 24px !important;
+    background: var(--cfe-surface) !important;
+}
+
+body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-detail) :where(
+    #application,
+    .ic-app,
+    .ic-app-main-content,
+    .ic-Layout-wrapper,
+    .ic-Layout-columns
+) {
+    background: var(--cfe-surface) !important;
 }
 
 body.cfe-theme-applied:is(.cfe-page-assignment-detail, .cfe-page-discussion-detail) .ic-Layout-contentWrapper {

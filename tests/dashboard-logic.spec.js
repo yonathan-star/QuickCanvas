@@ -132,6 +132,26 @@ const shell = `<!doctype html><html><head><meta charset="utf-8"><style>${styles}
     await page.locator('[data-filter="all"]').first().click();
     assert.equal(await page.locator('[data-filter="all"]').first().getAttribute("class").then((v) => v.includes("is-active")), true);
 
+    const assignmentCheckbox = page.locator(
+      "#cfe-assignments .cfe-task-check input",
+    ).first();
+    await assignmentCheckbox.check();
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".cfe-progress-summary")?.textContent ===
+        "1 of 1 done",
+    );
+    assert.equal(
+      await page.locator(".cfe-ring-center").textContent(),
+      "100%",
+      "manual completion did not update the progress ring",
+    );
+    assert.equal(
+      await page.locator("#cfe-task-list .cfe-task-check input").first().isChecked(),
+      true,
+      "manual completion did not synchronize across task widgets",
+    );
+
     await page.evaluate(() => window.__setQuickCanvasAuth(false));
     await page.locator("#cfe-auth-wall").waitFor({ timeout: 5000 });
     assert.equal(await page.locator("#cfe-dashboard").count(), 0);
@@ -152,7 +172,7 @@ const shell = `<!doctype html><html><head><meta charset="utf-8"><style>${styles}
     assert.deepEqual(metrics, {
       horizontalOverflow: false,
       dashboardCount: 1,
-      build: "0.9.11",
+      build: "0.9.12",
     });
     console.log("Dashboard logic regression checks passed.");
   } finally {
