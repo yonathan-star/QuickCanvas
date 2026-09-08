@@ -1,5 +1,5 @@
 ﻿(() => {
-  const CONTENT_BUILD = "0.9.9";
+  const CONTENT_BUILD = "0.9.10";
   const scriptInstanceId = `cfe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   window.__cfeActiveInstanceId = scriptInstanceId;
   document.documentElement.dataset.cfeBuild = CONTENT_BUILD;
@@ -27,6 +27,8 @@
   let globalNavPaintFrame = null;
   let courseAdapterRetryTimers = [];
   let courseExperienceRequestId = 0;
+  const courseApiResponseCache = new Map();
+  const courseApiInFlightRequests = new Map();
   let nonDashboardThemeQueued = false;
   let passiveRouteSyncBound = false;
   let routeWatcherIntervalId = null;
@@ -133,8 +135,6 @@
 
   function getCourseRouteContext(pathname) {
     const path = String(pathname || "/").toLowerCase();
-    const forceCourseHome =
-      new URLSearchParams(window.location.search).get("quickcanvas_home") === "1";
     const courseMatch = path.match(/^\/courses\/([^/]+)(?:\/(.*))?$/);
     const courseTail = String(courseMatch?.[2] || "").replace(/\/+$/, "");
     const semanticText = [
@@ -177,27 +177,15 @@
           semanticText,
         ));
     const isCourseRoot = Boolean(courseMatch && !courseTail);
-    // Canvas can render a configured course home (most notably Syllabus) at
-    // /courses/:id instead of the section's canonical URL. Use the active
-    // Canvas navigation/breadcrumb semantics so the correct page adapter wins.
-    const rootSection = isCourseRoot && !forceCourseHome
-      ? {
-          announcements: /\bannouncements?\b/.test(semanticText),
-          assignments: /\bassignments?\b/.test(semanticText),
-          discussions: /\bdiscussions?\b/.test(semanticText),
-          grades: /\bgrades?\b/.test(semanticText),
-          modules: /\bmodules?\b/.test(semanticText),
-          pages: /\bpages?\b/.test(semanticText),
-          people: /\bpeople\b|\broster\b/.test(semanticText),
-          quizzes: /\bquizzes?\b|\bassessments?\b/.test(semanticText),
-          syllabus: /\bsyllabus\b/.test(semanticText),
-        }
-      : {};
-    const hasSemanticRootSection = Object.values(rootSection).some(Boolean);
+    // The Canvas course root may render a teacher-selected front page such as
+    // Syllabus. QuickCanvas deliberately owns this route so Course Home always
+    // opens the concise course summary. Explicit section URLs still use their
+    // matching adapters.
+    const rootSection = {};
 
     return {
       isCourse: Boolean(courseMatch),
-      isCourseHome: Boolean(isCourseRoot && (forceCourseHome || !hasSemanticRootSection)),
+      isCourseHome: Boolean(isCourseRoot),
       isAssignmentDetail,
       isDiscussionDetail: isDiscussionDetail && !isAnnouncementDetail,
       isAnnouncements:
@@ -708,6 +696,11 @@
   }
 
   function activateCourseDataExperience(content, root) {
+    if (root?.dataset?.cfeExperience === "course-home") {
+      document
+        .querySelectorAll("#cfe-course-due-widget, #cfe-course-widget-board")
+        .forEach((node) => node.remove());
+    }
     courseExperienceOriginals(content).forEach((node) =>
       node.classList.add("cfe-native-course-hidden"),
     );
@@ -1045,13 +1038,35 @@
     return "";
   }
 
-  async function fetchCanvasJson(url) {
-    const response = await fetch(url, {
+  async function fetchCanvasJson(url, { ttlMs = 60_000, timeoutMs = 10_000, force = false } = {}) {
+    const href = String(url || "");
+    const now = Date.now();
+    const cached = courseApiResponseCache.get(href);
+    if (!force && cached && now - cached.timestamp < ttlMs) {
+      return cached.data;
+    }
+    if (!force && courseApiInFlightRequests.has(href)) {
+      return courseApiInFlightRequests.get(href);
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const request = fetch(href, {
       credentials: "include",
       headers: { Accept: "application/json" },
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        courseApiResponseCache.set(href, { timestamp: Date.now(), data });
+        return data;
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        courseApiInFlightRequests.delete(href);
+      });
+    courseApiInFlightRequests.set(href, request);
+    return request;
   }
 
   function createDataExperienceRoot({ kind, eyebrow, title, description }) {
@@ -1107,7 +1122,7 @@
     return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths}</svg>`;
   }
 
-  function renderCourseHomeExperience(course, modules, assignments, announcements, groups, courseName, courseId) {
+  function renderCourseHomeExperience(course, modules, assignments, announcements, groups, courseName, courseId, courseProgress = null) {
     const safeModules = Array.isArray(modules) ? modules.filter(Boolean) : [];
     const safeAssignments = (Array.isArray(assignments) ? assignments : [])
       .filter(Boolean)
@@ -1119,8 +1134,16 @@
     const teacher = (Array.isArray(course?.teachers) ? course.teachers : [])[0];
     const allItems = safeModules.flatMap((module) => module?.items || []);
     const required = allItems.filter((item) => item?.completion_requirement);
-    const completed = required.filter((item) => item?.completion_requirement?.completed).length;
-    const progress = required.length ? Math.round((completed / required.length) * 100) : 0;
+    const fallbackCompleted = required.filter((item) => item?.completion_requirement?.completed).length;
+    const apiRequired = Number(courseProgress?.requirement_count);
+    const apiCompleted = Number(courseProgress?.requirement_completed_count);
+    const hasApiProgress = Number.isFinite(apiRequired) && apiRequired >= 0 && Number.isFinite(apiCompleted) && apiCompleted >= 0;
+    const requiredCount = hasApiProgress ? apiRequired : required.length;
+    const completed = hasApiProgress ? Math.min(apiCompleted, requiredCount) : fallbackCompleted;
+    const progress = requiredCount ? Math.round((completed / requiredCount) * 100) : 0;
+    const nextRequirementUrl = sanitizeHref(
+      courseProgress?.next_requirement_url || `${window.location.origin}/courses/${courseId}/modules`,
+    );
     const section = (Array.isArray(course?.sections) ? course.sections : [])[0];
     const now = Date.now();
     const upcomingAssignments = safeAssignments.filter((assignment) => {
@@ -1146,7 +1169,7 @@
       <section class="cfe-course-home-card"><header><div><h2>Recent announcements</h2><p>Updates from your instructor</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/announcements`)}">View all</a></header>${safeAnnouncements.slice(0, 2).map((topic) => `<a class="cfe-course-home-row" href="${escapeAttr(sanitizeHref(topic?.html_url || `${window.location.origin}/courses/${courseId}/announcements`))}"><i class="${topic?.read_state === "read" ? "" : "is-unread"}"></i><div><strong>${escapeHtml(topic?.title || "Course announcement")}</strong><p>${escapeHtml(plainTextFromHtml(topic?.message).slice(0, 150))}</p><small>${escapeHtml(announcementAuthorName(topic))} · ${escapeHtml(formatCourseDate(topic?.posted_at || topic?.created_at))}</small></div></a>`).join("") || `<div class="cfe-course-home-empty"><span>${courseGlyph("message")}</span><div><strong>You’re all caught up</strong><p>No recent announcements from your instructor.</p></div></div>`}</section>
       <section class="cfe-course-home-card"><header><div><h2>Due soon</h2><p>Your upcoming course work</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/assignments`)}">All assignments</a></header>${dueSoon.map((assignment) => { const status = assignmentStatus(assignment); return `<a class="cfe-course-home-row is-assignment" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><span>${moduleItemIcon((assignment?.submission_types || [])[0] || "assignment")}</span><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><p>${escapeHtml(String(assignment?.points_possible ?? "—"))} points</p></div><em class="is-${status.tone}">${status.label === "Not submitted" ? escapeHtml(formatCourseDateTime(assignment?.due_at)) : escapeHtml(status.label)}</em></a>`; }).join("") || '<div class="cfe-collection-empty">No upcoming assignments.</div>'}</section>
       <section class="cfe-course-quick-links"><h2>Quick links</h2><div>${[["Modules", "modules", "module"], ["Grades", "grades", "grades"], ["Syllabus", "assignments/syllabus", "file"], ["People", "users", "people"]].map(([label, route, icon]) => `<a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/${route}`)}"><span>${courseGlyph(icon)}</span>${label}</a>`).join("")}</div></section></div>
-      <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${progress}%</strong></header><div class="cfe-progress-track"><i style="width:${progress}%"></i></div><p>${completed} of ${required.length} required items complete</p><a class="cfe-context-button" href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}">${courseGlyph("chart")}<span>View progress</span></a></section><section><header><h3>Course contacts</h3><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/users`)}">People</a></header>${teacher ? `<div class="cfe-contact"><i>${escapeHtml(announcementInitials(teacher?.display_name || teacher?.name || "Instructor"))}</i><div><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Instructor")}</strong><small>Course instructor</small></div></div><a class="cfe-context-inline-action" href="${escapeAttr(`${window.location.origin}/conversations?context_id=course_${courseId}`)}">${courseGlyph("message")}<span>Message instructor</span></a>` : "<p>Instructor information is available in Canvas.</p>"}</section><section><header><h3>Recent feedback</h3></header>${recentFeedback.map((assignment) => `<a href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))} points</small></a>`).join("") || '<div class="cfe-feedback-loading"><i></i><i></i><i></i><small>No recent feedback yet</small></div>'}</section><section><header><h3>Study groups</h3><span class="cfe-context-icon">${courseGlyph("people")}</span></header>${safeGroups.slice(0, 3).map((group) => `<a href="${escapeAttr(`${window.location.origin}/groups/${group.id}`)}"><strong>${escapeHtml(group?.name || "Course group")}</strong><small>${group?.members_count != null ? `${escapeHtml(String(group.members_count))} members` : "Open group"}</small></a>`).join("") || '<div class="cfe-context-empty"><strong>No groups assigned</strong><small>Your instructor has not created course groups yet.</small></div>'}</section><section class="cfe-course-tool-links"><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/calendar?context_codes[]=course_${courseId}`)}">${courseGlyph("calendar")}<span>Course calendar</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/files`)}">${courseGlyph("file")}<span>Course files</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades`)}">${courseGlyph("help")}<span>Course help</span></a></section></aside></div>`;
+      <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${progress}%</strong></header><div class="cfe-progress-track"><i style="width:${progress}%"></i></div><p>${completed} of ${requiredCount} required items complete</p><a class="cfe-context-button" href="${escapeAttr(nextRequirementUrl)}">${courseGlyph("chart")}<span>View progress</span></a></section><section><header><h3>Course contacts</h3><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/users`)}">People</a></header>${teacher ? `<div class="cfe-contact"><i>${escapeHtml(announcementInitials(teacher?.display_name || teacher?.name || "Instructor"))}</i><div><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Instructor")}</strong><small>Course instructor</small></div></div><a class="cfe-context-inline-action" href="${escapeAttr(`${window.location.origin}/conversations?context_id=course_${courseId}`)}">${courseGlyph("message")}<span>Message instructor</span></a>` : "<p>Instructor information is available in Canvas.</p>"}</section><section><header><h3>Recent feedback</h3></header>${recentFeedback.map((assignment) => `<a href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))} points</small></a>`).join("") || '<div class="cfe-feedback-loading"><i></i><i></i><i></i><small>No recent feedback yet</small></div>'}</section><section><header><h3>Study groups</h3><span class="cfe-context-icon">${courseGlyph("people")}</span></header>${safeGroups.slice(0, 3).map((group) => `<a href="${escapeAttr(`${window.location.origin}/groups/${group.id}`)}"><strong>${escapeHtml(group?.name || "Course group")}</strong><small>${group?.members_count != null ? `${escapeHtml(String(group.members_count))} members` : "Open group"}</small></a>`).join("") || '<div class="cfe-context-empty"><strong>No groups assigned</strong><small>Your instructor has not created course groups yet.</small></div>'}</section><section class="cfe-course-tool-links"><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/calendar?context_codes[]=course_${courseId}`)}">${courseGlyph("calendar")}<span>Course calendar</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/files`)}">${courseGlyph("file")}<span>Course files</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades`)}">${courseGlyph("help")}<span>Course help</span></a></section></aside></div>`;
     return root;
   }
 
@@ -1592,9 +1615,13 @@
         ["term", "teachers", "sections", "total_scores"].forEach((include) =>
           courseUrl.searchParams.append("include[]", include),
         );
+        const progressUrl = new URL(
+          `${window.location.origin}/api/v1/courses/${courseId}/users/self/progress`,
+        );
         const modulesUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/modules`);
         modulesUrl.searchParams.set("per_page", "20");
         modulesUrl.searchParams.append("include[]", "items");
+        modulesUrl.searchParams.append("include[]", "content_details");
         const assignmentsUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/assignments`);
         assignmentsUrl.searchParams.set("per_page", "20");
         assignmentsUrl.searchParams.set("order_by", "due_at");
@@ -1604,13 +1631,37 @@
         announcementsUrl.searchParams.set("per_page", "10");
         const groupsUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/groups`);
         groupsUrl.searchParams.set("per_page", "20");
-        const [course, modules, assignments, announcements, groups] = await Promise.all([
-          fetchCanvasJson(courseUrl),
-          fetchCanvasJson(modulesUrl).catch(() => []),
-          fetchCanvasJson(assignmentsUrl).catch(() => []),
-          fetchCanvasJson(announcementsUrl).catch(() => []),
-          fetchCanvasJson(groupsUrl).catch(() => []),
+        const secondaryRequests = [
+          fetchCanvasJson(modulesUrl, { timeoutMs: 6_000 }).catch(() => []),
+          fetchCanvasJson(assignmentsUrl, { timeoutMs: 6_000 }).catch(() => []),
+          fetchCanvasJson(announcementsUrl, { timeoutMs: 6_000 }).catch(() => []),
+          fetchCanvasJson(groupsUrl, { timeoutMs: 6_000 }).catch(() => []),
+        ];
+        const [course, courseProgress] = await Promise.all([
+          fetchCanvasJson(courseUrl, { ttlMs: 120_000, timeoutMs: 7_000 }),
+          fetchCanvasJson(progressUrl, { ttlMs: 30_000, timeoutMs: 5_000 }).catch(() => null),
         ]);
+        if (requestId !== courseExperienceRequestId) return;
+
+        // Paint the useful course shell as soon as the two small, essential
+        // requests finish. Announcements, assignments, modules, and groups can
+        // fill in immediately afterward without holding the whole page hostage.
+        root = renderCourseHomeExperience(
+          course,
+          [],
+          [],
+          [],
+          [],
+          courseName,
+          courseId,
+          courseProgress,
+        );
+        loading.replaceWith(root);
+        const initialRoot = root;
+        const [modules, assignments, announcements, groups] = await Promise.all(
+          secondaryRequests,
+        );
+        if (requestId !== courseExperienceRequestId) return;
         root = renderCourseHomeExperience(
           course,
           modules,
@@ -1619,7 +1670,10 @@
           groups,
           courseName,
           courseId,
+          courseProgress,
         );
+        initialRoot.replaceWith(root);
+        return;
       } else if (experience === "announcements" || experience === "discussions") {
         const url = new URL(
           `${window.location.origin}/api/v1/courses/${courseId}/discussion_topics`,
@@ -4344,6 +4398,12 @@
     if (!isExtensionContextValid()) return;
     const path = window.location.pathname || "";
     if (!isCourseHomePath(path)) return;
+    if (document.querySelector('[data-cfe-experience="course-home"]')) {
+      document
+        .querySelectorAll("#cfe-course-due-widget, #cfe-course-widget-board")
+        .forEach((node) => node.remove());
+      return;
+    }
     if (!getCourseRouteContext(path).isCourseHome) {
       document
         .querySelectorAll("#cfe-course-due-widget, #cfe-course-widget-board")
@@ -4378,6 +4438,7 @@
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
     if (!(host instanceof Element)) return;
+    if (document.querySelector('[data-cfe-experience="course-home"]')) return;
 
     const priorBoard = document.getElementById("cfe-course-widget-board");
     const restoreEditMode =

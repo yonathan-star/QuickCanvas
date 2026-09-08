@@ -155,6 +155,17 @@ async function runCase(browser, url, activeSection, options = {}) {
         }),
       });
     }
+    if (requestUrl.pathname.endsWith("/api/v1/courses/10585/users/self/progress")) {
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          requirement_count: 29,
+          requirement_completed_count: 18,
+          next_requirement_url: "https://canvas.test/courses/10585/modules/items/11",
+          completed_at: null,
+        }),
+      });
+    }
     const collectionFixtures = {
       "/api/v1/courses/10585/modules": [{ id: 1, name: "Limits", published: true, items: [{ id: 11, title: "Limits overview", type: "Page", html_url: "https://canvas.test/courses/10585/pages/limits" }] }],
       "/api/v1/courses/10585/assignment_groups": [{ id: 4, name: "Practice" }],
@@ -215,7 +226,8 @@ async function runCase(browser, url, activeSection, options = {}) {
     Announcements: "announcements",
     Syllabus: "syllabus",
   };
-  const expectedDataKind = new URL(url).searchParams.get("quickcanvas_home") === "1"
+  const caseUrl = new URL(url);
+  const expectedDataKind = /^\/courses\/[^/]+\/?$/.test(caseUrl.pathname)
     ? "course-home"
     : dataExperienceKinds[activeSection];
   const expectedExperience = isExternalTool
@@ -329,6 +341,15 @@ async function runCase(browser, url, activeSection, options = {}) {
       courseHomeMessageAction: Boolean(
         document.querySelector(".cfe-context-inline-action"),
       ),
+      courseProgressText: document.querySelector(
+        ".cfe-course-context-panel section:first-child p",
+      )?.textContent,
+      courseProgressPercent: document.querySelector(
+        ".cfe-course-context-panel section:first-child header strong",
+      )?.textContent,
+      courseProgressHref: document.querySelector(
+        ".cfe-course-context-panel .cfe-context-button",
+      )?.getAttribute("href"),
       injectedHeaderCopies: document.querySelectorAll(
         ".cfe-course-data-experience .cfe-course-page-copy",
       ).length,
@@ -383,24 +404,26 @@ async function runCase(browser, url, activeSection, options = {}) {
   if (fs.existsSync(chromePath)) launchOptions.executablePath = chromePath;
   const browser = await chromium.launch(launchOptions);
   try {
-    const syllabus = await runCase(
+    const configuredRoot = await runCase(
       browser,
       "https://canvas.test/courses/10585",
       "Syllabus",
     );
-    assert.equal(syllabus.identityCount, 1);
-    assert.equal(syllabus.identityIsImmediatelyBeforeTabs, true);
-    assert.equal(syllabus.courseNavLinkHeight, 36);
-    assert.equal(syllabus.identityLabelVisible, false);
-    assert.equal(syllabus.syllabus, true);
-    assert.equal(syllabus.courseHome, false);
-    assert.equal(syllabus.title, "Course Syllabus");
-    assert.equal(syllabus.hasWrongHomeWidgets, false);
-    assert.equal(syllabus.dataExperience, "syllabus");
-    assert.equal(syllabus.nativeHidden, true);
-    assert.equal(syllabus.contentWrapperBackground, "rgb(255, 255, 255)");
-    assert.match(syllabus.syllabusBody, /Limits, derivatives/);
-    assert.deepEqual(syllabus.courseNavLabels.slice(0, 10), [
+    assert.equal(configuredRoot.identityCount, 1);
+    assert.equal(configuredRoot.identityIsImmediatelyBeforeTabs, true);
+    assert.equal(configuredRoot.courseNavLinkHeight, 36);
+    assert.equal(configuredRoot.identityLabelVisible, false);
+    assert.equal(configuredRoot.syllabus, false);
+    assert.equal(configuredRoot.courseHome, true);
+    assert.equal(configuredRoot.hasWrongHomeWidgets, false);
+    assert.equal(configuredRoot.dataExperience, "course-home");
+    assert.equal(configuredRoot.nativeHidden, true);
+    assert.equal(configuredRoot.contentWrapperBackground, "rgb(255, 255, 255)");
+    assert.equal(configuredRoot.activeCourseNav, "Home");
+    assert.equal(configuredRoot.courseProgressPercent, "62%");
+    assert.equal(configuredRoot.courseProgressText, "18 of 29 required items complete");
+    assert.equal(configuredRoot.courseProgressHref, "https://canvas.test/courses/10585/modules/items/11");
+    assert.deepEqual(configuredRoot.courseNavLabels.slice(0, 10), [
       "Home",
       "Announcements",
       "Modules",
