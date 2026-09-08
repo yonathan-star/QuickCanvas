@@ -348,8 +348,7 @@ body.is-signed-out .auth-panel .actions .secondary {
 .theme-editor-panel > .hint { display: none; }
 .theme-editor-panel:has(.theme-advanced[open]) > .actions { display: flex; }
 .theme-editor-panel:has(.theme-advanced[open]) > .hint { display: block; }
-.community-panel { order: 6; display: none; }
-.community-panel.is-expanded { display: block; }
+.community-panel { order: 6; }
 .popup-footer { order: 7; justify-content: space-between; padding: 13px 3px 0; color: var(--muted); font-size: 9px; }
 .popup-footer button { border: 0; background: transparent; color: var(--accent); font: 700 9px var(--font-body); cursor: pointer; }
 

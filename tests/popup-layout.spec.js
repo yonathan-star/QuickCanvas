@@ -40,6 +40,28 @@ const html = fs
     assert.equal(signedOut.overflow, false);
     assert.equal(signedOut.primaryWidth, signedOut.panelInnerWidth);
     console.log("Popup signed-out layout checks passed.");
+
+    await page.evaluate(() => {
+      document.body.classList.remove("is-signed-out");
+      document.querySelectorAll("[data-pane]").forEach((pane) => {
+        pane.hidden = pane.dataset.pane !== "themes";
+      });
+    });
+    const themeBrowser = await page.evaluate(() => ({
+      communityDisplay: getComputedStyle(
+        document.querySelector(".community-panel"),
+      ).display,
+      presetButtonLabel: document
+        .querySelector("#togglePresets")
+        .textContent.trim(),
+      overflow:
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
+    }));
+    assert.notEqual(themeBrowser.communityDisplay, "none");
+    assert.equal(themeBrowser.presetButtonLabel, "View all presets");
+    assert.equal(themeBrowser.overflow, false);
+    console.log("Popup theme discovery layout checks passed.");
   } finally {
     await browser.close();
   }

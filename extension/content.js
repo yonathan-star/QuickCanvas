@@ -1,5 +1,5 @@
 ﻿(() => {
-  const CONTENT_BUILD = "0.9.13";
+  const CONTENT_BUILD = "0.9.14";
   const scriptInstanceId = `cfe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   window.__cfeActiveInstanceId = scriptInstanceId;
   document.documentElement.dataset.cfeBuild = CONTENT_BUILD;

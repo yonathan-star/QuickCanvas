@@ -529,13 +529,33 @@ function setProfileStatus(message, isError = false) {
   profileStatusEl.classList.toggle("error", isError);
 }
 
-function getStoredActiveTab() {
+async function getStoredActiveTab() {
+  try {
+    const stored = await chrome.storage.local.get(POPUP_ACTIVE_TAB_KEY);
+    const tabName = String(stored?.[POPUP_ACTIVE_TAB_KEY] || "");
+    if (["themes", "account", "admin"].includes(tabName)) {
+      return tabName;
+    }
+  } catch (error) {
+    // Fall back to the extension page's local storage below.
+  }
   try {
     const stored = localStorage.getItem(POPUP_ACTIVE_TAB_KEY);
-    return stored ? String(stored) : "";
+    return ["themes", "account", "admin"].includes(stored) ? stored : "";
   } catch (error) {
     return "";
   }
+}
+
+function storeActiveTab(tabName) {
+  try {
+    localStorage.setItem(POPUP_ACTIVE_TAB_KEY, tabName);
+  } catch (error) {
+    // The durable extension storage below remains the primary copy.
+  }
+  chrome.storage.local
+    .set({ [POPUP_ACTIVE_TAB_KEY]: tabName })
+    .catch(() => {});
 }
 
 function errorMessage(error, fallback = "Unexpected error.") {
@@ -2537,7 +2557,7 @@ function openOptions() {
   }
 }
 
-function setActiveTab(tabName) {
+function setActiveTab(tabName, { persist = true } = {}) {
   if (isProfileSaveInProgress && tabName !== "account") {
     tabName = "account";
   }
@@ -2553,10 +2573,8 @@ function setActiveTab(tabName) {
     const shouldShow = pane.dataset.pane === tabName;
     pane.hidden = !shouldShow;
   });
-  try {
-    localStorage.setItem(POPUP_ACTIVE_TAB_KEY, tabName);
-  } catch (error) {
-    // ignore local tab persistence issues
+  if (persist) {
+    storeActiveTab(tabName);
   }
   // Keep account-only sections hidden unless signed in.
   if (tabName === "account") {
@@ -2564,10 +2582,18 @@ function setActiveTab(tabName) {
       accountProfilePanel.hidden = !isUiSignedIn;
     }
     if (accountCloudPanel) {
-      accountCloudPanel.hidden = true;
+      accountCloudPanel.hidden = !isUiSignedIn;
     }
     if (tokenHelpPanel) {
       tokenHelpPanel.hidden = true;
+    }
+    if (isUiSignedIn && accountCloudPanel && cloudListEl) {
+      const hasCloudItems = cloudListEl.querySelector(".cloud-item");
+      if (!hasCloudItems) {
+        loadCloudThemes().catch((error) => {
+          console.warn("[QuickCanvas] account cloud refresh failed:", error);
+        });
+      }
     }
   }
   if (tabName === "themes" && communityListEl && supabaseClient) {
@@ -5491,6 +5517,9 @@ async function loadAdminThemes(options = {}) {
 
 function updateAuthUI(session) {
   const signedIn = Boolean(getEffectiveSession(session));
+  const activeTabName =
+    tabs.find((tab) => tab.classList.contains("is-active"))?.dataset.tab ||
+    "account";
   document.body.classList.toggle("is-signed-out", !signedIn);
   syncAuthGateFromSession(session);
   isUiSignedIn = signedIn;
@@ -5558,10 +5587,10 @@ function updateAuthUI(session) {
         : "Sign in with your email and password.";
   }
   if (accountProfilePanel) {
-    accountProfilePanel.hidden = !signedIn;
+    accountProfilePanel.hidden = !signedIn || activeTabName !== "account";
   }
   if (accountCloudPanel) {
-    accountCloudPanel.hidden = true;
+    accountCloudPanel.hidden = !signedIn || activeTabName !== "account";
   }
   if (tokenHelpPanel) {
     tokenHelpPanel.hidden = true;
@@ -5620,14 +5649,9 @@ if (togglePresetsBtn) {
   togglePresetsBtn.addEventListener("click", () => {
     const expanded = !presetGrid.classList.contains("is-expanded");
     presetGrid.classList.toggle("is-expanded", expanded);
-    communityPanel?.classList.toggle("is-expanded", expanded);
-    togglePresetsBtn.textContent = expanded ? "Show less" : "View all";
-    if (expanded) {
-      loadCommunityThemes(
-        sortLatestBtn.classList.contains("is-active") ? "latest" : "trending",
-        { force: true },
-      ).catch(() => {});
-    }
+    togglePresetsBtn.textContent = expanded
+      ? "Show fewer presets"
+      : "View all presets";
   });
 }
 enabledInput.addEventListener(
@@ -5827,7 +5851,10 @@ if (supabaseClient) {
 (async () => {
   try {
     setAuthMode("signin");
-    setActiveTab(getStoredActiveTab() || "account");
+    const storedActiveTab = await getStoredActiveTab();
+    // Authentication is still loading here, so render a temporary safe tab
+    // without replacing the user's saved location.
+    setActiveTab("account", { persist: false });
     renderFontOptions();
     renderPresets();
     await Promise.all([
@@ -5841,7 +5868,11 @@ if (supabaseClient) {
       const session = await getActiveSession();
       if (session) {
         updateAuthUI(session);
-        setActiveTab(getStoredActiveTab() || "themes");
+        const restoredTab =
+          storedActiveTab === "admin" && !isAdmin(session)
+            ? "themes"
+            : storedActiveTab || "themes";
+        setActiveTab(restoredTab);
         await setAuthGateState({
           authenticated: true,
           hasUsername: true,

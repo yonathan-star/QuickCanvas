@@ -172,7 +172,7 @@ const shell = `<!doctype html><html><head><meta charset="utf-8"><style>${styles}
     assert.deepEqual(metrics, {
       horizontalOverflow: false,
       dashboardCount: 1,
-      build: "0.9.13",
+      build: "0.9.14",
     });
     console.log("Dashboard logic regression checks passed.");
   } finally {

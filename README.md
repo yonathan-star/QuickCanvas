@@ -9,6 +9,11 @@ Canvas OAuth is still the supported option for a standalone or multi-school
 service. It requires an administrator-enabled Developer Key and a trusted
 backend for the client secret; never embed that secret in this extension.
 
+Version 0.9.14 keeps the popup on its last selected tab across closes and
+browser restarts. Community themes are now always discoverable on the Themes
+tab, the preset expander controls only the built-in preset list, and signed-in
+users can access their Cloud Themes from Account again.
+
 Version 0.9.13 implements the approved Superdesign course workspace as a
 structural Canvas adapter rather than a generic skin. Native routes now use the
 same 80px global rail, 208px course rail, 48px breadcrumb bar, content bounds,
