@@ -4712,7 +4712,23 @@ body.cfe-theme-applied.cfe-quiz-page :where(
 
 /* Dashboard — approved movable-widget workspace. */
 body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
-    background: var(--cfe-bg) !important;
+    background: var(--cfe-surface) !important;
+    background-image: none !important;
+}
+
+/* Keep Dashboard on the same flush page surface as course routes. Canvas
+   paints several full-page wrappers independently, so each layer needs the
+   shared theme surface instead of the legacy dashboard canvas color. */
+body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only :where(
+    #application,
+    .ic-app,
+    .ic-Layout-wrapper,
+    .ic-Layout-main,
+    .ic-Layout-mainContent,
+    .ic-Layout-columns
+) {
+    background: var(--cfe-surface) !important;
+    background-image: none !important;
 }
 
 #cfe-dashboard {
@@ -4813,17 +4829,31 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 
 #cfe-dashboard .cfe-header-controls .cfe-refresh {
     width: 42px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 !important;
     overflow: hidden;
-    color: transparent !important;
-    font-size: 0;
+    display: grid !important;
+    place-items: center !important;
+    color: var(--cfe-muted) !important;
+    line-height: 0 !important;
 }
 
-#cfe-dashboard .cfe-header-controls .cfe-refresh::before {
-    content: "↻";
-    display: grid;
-    place-items: center;
-    color: var(--cfe-muted);
-    font-size: 18px;
+#cfe-dashboard .cfe-header-controls .cfe-refresh-icon {
+    display: block;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+}
+
+#cfe-dashboard .cfe-header-controls .cfe-refresh.is-loading .cfe-refresh-icon {
+    animation: cfe-refresh-spin 0.75s linear infinite;
+}
+
+@keyframes cfe-refresh-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 #cfe-dashboard .cfe-filter {
@@ -4950,6 +4980,55 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
     overflow: auto;
 }
 
+#cfe-dashboard :where(
+    .cfe-list,
+    .cfe-task-list,
+    #cfe-personal-list
+) {
+    scrollbar-color:
+        color-mix(in srgb, var(--cfe-accent) 46%, var(--cfe-border))
+        transparent;
+    scrollbar-width: thin;
+}
+
+#cfe-dashboard :where(
+    .cfe-list,
+    .cfe-task-list,
+    #cfe-personal-list
+)::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+#cfe-dashboard :where(
+    .cfe-list,
+    .cfe-task-list,
+    #cfe-personal-list
+)::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#cfe-dashboard :where(
+    .cfe-list,
+    .cfe-task-list,
+    #cfe-personal-list
+)::-webkit-scrollbar-thumb {
+    min-height: 34px;
+    border: 2px solid var(--cfe-surface);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--cfe-accent) 46%, var(--cfe-border));
+}
+
+#cfe-dashboard :where(
+    .cfe-list,
+    .cfe-task-list,
+    #cfe-personal-list
+)::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
 #cfe-dashboard .cfe-tasks-widget .cfe-task-row {
     min-height: 0;
     padding: 12px !important;
@@ -5012,8 +5091,10 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 
 #cfe-dashboard .cfe-tabs {
     padding: 3px !important;
-    gap: 2px !important;
-    background: var(--cfe-surface-alt) !important;
+    gap: 0 !important;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--cfe-accent) 6%, var(--cfe-surface)) !important;
+    border: 1px solid color-mix(in srgb, var(--cfe-border) 82%, transparent) !important;
     border-radius: 999px !important;
 }
 
@@ -5027,9 +5108,9 @@ body.cfe-theme-applied.cfe-page-dashboard.cfe-dashboard-only {
 }
 
 #cfe-dashboard .cfe-tab.is-active {
-    background: var(--cfe-surface) !important;
+    background: var(--cfe-accent-soft) !important;
     color: var(--cfe-accent) !important;
-    box-shadow: var(--cfe-shadow-soft) !important;
+    box-shadow: none !important;
 }
 
 #cfe-dashboard .cfe-quick-links {
@@ -6339,7 +6420,7 @@ body.cfe-theme-applied .cfe-data-page-header {
     align-items: flex-start;
     justify-content: space-between;
     gap: 20px;
-    margin: 0 0 24px;
+    margin: 0 0 20px;
 }
 
 body.cfe-theme-applied .cfe-data-page-copy {
@@ -6367,9 +6448,9 @@ body.cfe-theme-applied .cfe-data-page-copy h1 {
 }
 
 body.cfe-theme-applied .cfe-data-page-copy > p:last-child {
-    margin: 8px 0 0;
+    margin: 4px 0 0;
     color: var(--cfe-muted);
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.45;
 }
 
@@ -6819,11 +6900,139 @@ body.cfe-theme-applied .cfe-announcement-message :where(p, li) {
     line-height: 1.75 !important;
 }
 
+body.cfe-theme-applied .cfe-announcement-attachments {
+    display: grid;
+    gap: 8px;
+    padding: 0 0 18px;
+}
+
+body.cfe-theme-applied .cfe-announcement-attachments h3,
+body.cfe-theme-applied .cfe-discussion-replies > header h3 {
+    margin: 0;
+    color: var(--cfe-muted);
+    font-family: var(--cfe-font-body);
+    font-size: 9px;
+    font-weight: 650;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+body.cfe-theme-applied .cfe-announcement-attachment {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    color: var(--cfe-text) !important;
+    background: var(--cfe-surface-alt);
+    border-radius: 8px;
+    text-decoration: none !important;
+}
+
+body.cfe-theme-applied .cfe-announcement-attachment > span {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    place-items: center;
+    color: var(--cfe-accent);
+    background: var(--cfe-accent-soft);
+    border-radius: 7px;
+}
+
+body.cfe-theme-applied .cfe-announcement-attachment p {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+}
+
+body.cfe-theme-applied .cfe-announcement-attachment :where(strong, small) {
+    color: inherit;
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-announcement-attachment small {
+    color: var(--cfe-muted);
+    font-weight: 400;
+}
+
+body.cfe-theme-applied .cfe-discussion-replies {
+    margin: 0 -20px;
+    border-top: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-discussion-replies > header {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: var(--cfe-surface-alt);
+}
+
+body.cfe-theme-applied .cfe-discussion-replies > header span {
+    color: var(--cfe-muted);
+    font-size: 9px;
+}
+
+body.cfe-theme-applied .cfe-discussion-reply {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-discussion-reply > span {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    color: var(--cfe-muted);
+    background: var(--cfe-surface-alt);
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 600;
+}
+
+body.cfe-theme-applied .cfe-discussion-reply header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+body.cfe-theme-applied .cfe-discussion-reply header :where(strong, small),
+body.cfe-theme-applied .cfe-discussion-reply .user_content {
+    color: var(--cfe-text) !important;
+    font-size: 10px !important;
+    line-height: 1.65 !important;
+}
+
+body.cfe-theme-applied .cfe-discussion-reply header small {
+    color: var(--cfe-muted) !important;
+}
+
 body.cfe-theme-applied .cfe-announcement-detail > footer {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding-top: 14px;
     border-top: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-announcement-detail > footer button {
+    min-height: 0 !important;
+    padding: 0 !important;
+    color: var(--cfe-accent) !important;
+    background: transparent !important;
+    border: 0 !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+}
+
+body.cfe-theme-applied .cfe-announcement-detail > footer button:disabled {
+    color: var(--cfe-muted) !important;
+    opacity: .55;
 }
 
 body.cfe-theme-applied .cfe-announcement-detail > footer a {
@@ -6900,6 +7109,32 @@ body.cfe-theme-applied .cfe-announcement-empty p {
 
     body.cfe-data-experience-active .cfe-syllabus-grid {
         display: block;
+    }
+}
+
+/* Final rail normalization. Canvas themes can add a gray border and shadow to
+   the menu list after our layout rules, creating pale seams and an 82px-wide
+   strip inside the 80px product rail. Keep every rail section continuous. */
+@media (min-width: 768px) {
+    body.cfe-theme-applied .ic-app-header,
+    body.cfe-theme-applied .ic-app-header__main-navigation,
+    body.cfe-theme-applied .ic-app-header__primary,
+    body.cfe-theme-applied #global_nav,
+    body.cfe-theme-applied .ic-app-header #menu,
+    body.cfe-theme-applied .ic-app-header .ic-app-header__menu-list,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation {
+        box-sizing: border-box !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        background-color: var(--cfe-nav-bg, #152b3a) !important;
+    }
+
+    body.cfe-theme-applied .ic-app-header__logomark-container,
+    body.cfe-theme-applied .ic-app-header__logo-container,
+    body.cfe-theme-applied .ic-app-header__secondary-navigation {
+        border: 0 !important;
+        box-shadow: none !important;
+        background-color: var(--cfe-nav-bg, #152b3a) !important;
     }
 }
 
@@ -7273,6 +7508,17 @@ body.cfe-theme-applied.cfe-page-course .cfe-tool-connected {
     text-decoration: none !important;
 }
 
+body.cfe-theme-applied.cfe-page-course .cfe-tool-toolbar-actions svg {
+    display: block;
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 body.cfe-theme-applied.cfe-page-course .cfe-tool-connected {
     color: var(--cfe-success) !important;
     background: var(--cfe-success-soft) !important;
@@ -7289,6 +7535,10 @@ body.cfe-theme-applied.cfe-page-course .cfe-tool-toolbar-actions a {
 
 body.cfe-theme-applied.cfe-page-external-tool #right-side,
 body.cfe-theme-applied.cfe-page-external-tool .right-side {
+    display: none !important;
+}
+
+body.cfe-theme-applied.cfe-page-external-tool .cfe-external-native-hidden {
     display: none !important;
 }
 
@@ -8043,10 +8293,22 @@ body.cfe-theme-applied .cfe-collection-controls {
 }
 
 body.cfe-theme-applied .cfe-collection-controls label {
+    min-width: 0;
     flex: 1 1 auto;
 }
 
+body.cfe-theme-applied .cfe-collection-controls .screenreader-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+}
+
 body.cfe-theme-applied .cfe-collection-controls input {
+    box-sizing: border-box !important;
     width: 100%;
     min-height: 38px !important;
     margin: 0 !important;
@@ -8091,7 +8353,7 @@ body.cfe-theme-applied .cfe-assignment-group {
 body.cfe-theme-applied .cfe-module-card > header,
 body.cfe-theme-applied .cfe-assignment-group > header {
     display: flex;
-    min-height: 54px;
+    min-height: 52px;
     align-items: center;
     gap: 12px;
     padding: 10px 16px;
@@ -8112,6 +8374,30 @@ body.cfe-theme-applied .cfe-module-card > header button {
     border-radius: 6px !important;
     box-shadow: none !important;
     font-size: 18px !important;
+}
+
+body.cfe-theme-applied .cfe-assignment-group > header > button {
+    display: grid !important;
+    width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    flex: 0 0 28px !important;
+    place-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: var(--cfe-muted) !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    font-family: var(--cfe-font-body) !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+}
+
+body.cfe-theme-applied .cfe-assignment-group > header > button:hover {
+    color: var(--cfe-text) !important;
+    background: var(--cfe-surface) !important;
 }
 
 body.cfe-theme-applied .cfe-module-card > header div,
@@ -8214,7 +8500,7 @@ body.cfe-theme-applied .cfe-module-item em {
 body.cfe-theme-applied .cfe-assignment-columns,
 body.cfe-theme-applied .cfe-assignment-row {
     display: grid;
-    grid-template-columns: minmax(240px, 1fr) 135px 145px 64px 112px;
+    grid-template-columns: minmax(240px, 1fr) 135px 155px 64px 112px;
     align-items: center;
     gap: 12px;
 }
@@ -8232,8 +8518,8 @@ body.cfe-theme-applied .cfe-assignment-columns {
 }
 
 body.cfe-theme-applied .cfe-assignment-row {
-    min-height: 54px;
-    padding: 8px 16px;
+    min-height: 52px;
+    padding: 0 16px;
     color: var(--cfe-text) !important;
     border-bottom: 1px solid var(--cfe-divider);
     text-decoration: none !important;
@@ -8254,6 +8540,28 @@ body.cfe-theme-applied .cfe-data-table a > div {
     gap: 2px;
 }
 
+body.cfe-theme-applied .cfe-assignment-row > div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+body.cfe-theme-applied .cfe-assignment-row > div > span:last-child {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+body.cfe-theme-applied .cfe-assignment-kind {
+    display: grid !important;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    place-items: center;
+    color: var(--cfe-accent) !important;
+    font-size: 13px !important;
+}
+
 body.cfe-theme-applied .cfe-assignment-row > span {
     color: var(--cfe-muted);
     font-size: 10px;
@@ -8269,7 +8577,7 @@ body.cfe-theme-applied :where(
     font-size: 9px;
     font-style: normal;
     font-weight: 600;
-    text-transform: capitalize;
+    text-transform: none;
 }
 
 body.cfe-theme-applied :where(.cfe-assignment-row em, .cfe-data-table em).is-success {
@@ -8290,6 +8598,140 @@ body.cfe-theme-applied :where(.cfe-assignment-row em, .cfe-data-table em).is-dan
 body.cfe-theme-applied :where(.cfe-assignment-row em, .cfe-data-table em).is-muted {
     color: var(--cfe-muted);
     background: var(--cfe-surface-alt);
+}
+
+/* Superdesign course shell: 80px global rail + 216px course rail. */
+html body.cfe-theme-applied.cfe-page-course #wrapper {
+    box-sizing: border-box !important;
+    width: calc(100% - 80px) !important;
+    margin-left: 80px !important;
+    background: var(--cfe-surface) !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course .ic-app-nav-toggle-and-crumbs {
+    box-sizing: border-box !important;
+    width: calc(100% - 216px) !important;
+    margin: 0 0 0 216px !important;
+    padding: 0 16px !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course #main.ic-Layout-columns {
+    box-sizing: border-box !important;
+    width: calc(100% - 216px) !important;
+    margin-left: 216px !important;
+    background: var(--cfe-surface) !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course,
+html body.cfe-theme-applied.cfe-page-course .ic-Layout-contentWrapper,
+html body.cfe-theme-applied.cfe-page-course #content.ic-Layout-contentMain,
+html body.cfe-theme-applied.cfe-page-course .ic-app-nav-toggle-and-crumbs {
+    background: var(--cfe-surface) !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course #left-side {
+    position: absolute !important;
+    top: -48px !important;
+    left: -216px !important;
+    box-sizing: border-box !important;
+    width: 216px !important;
+    min-width: 216px !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    background: var(--cfe-surface-alt) !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course #left-side #sticky-container {
+    box-sizing: border-box !important;
+    width: 216px !important;
+    height: 100vh !important;
+    padding: 20px 16px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course #left-side #sticky-container::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course #section-tabs-header-subtitle {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 0 8px !important;
+    padding: 0 !important;
+    color: var(--cfe-muted) !important;
+    font-size: 10px !important;
+    font-weight: 650 !important;
+    line-height: 1.2 !important;
+    letter-spacing: .12em !important;
+    text-transform: uppercase !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course .cfe-course-identity {
+    min-height: 0 !important;
+    margin: 0 0 20px !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course .cfe-course-identity-label,
+html body.cfe-theme-applied.cfe-page-course .cfe-course-identity-status {
+    display: none !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course #section-tabs {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 24px !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course #section-tabs .section {
+    width: 100% !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    margin: 1px 0 !important;
+    box-sizing: border-box !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course #section-tabs .section a {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 8px 12px !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course .ic-app-nav-toggle-and-crumbs .ic-app-course-nav-toggle {
+    box-sizing: border-box !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    margin-right: 12px !important;
+    padding: 0 !important;
+    border-radius: 6px !important;
+}
+
+html body.cfe-theme-applied.cfe-page-course #section-tabs .cfe-course-tools-label {
+    margin: 16px 0 7px !important;
+    padding: 14px 12px 0 !important;
+    color: var(--cfe-muted) !important;
+    border-top: 1px solid var(--cfe-divider) !important;
+    font-size: 9px !important;
+    font-weight: 650 !important;
+    letter-spacing: .12em !important;
+    list-style: none !important;
+    text-transform: uppercase !important;
+}
+
+@media (max-width: 1023px) {
+    html body.cfe-theme-applied.cfe-page-course .ic-app-nav-toggle-and-crumbs,
+    html body.cfe-theme-applied.cfe-page-course #main.ic-Layout-columns {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
 }
 
 body.cfe-theme-applied .cfe-grade-summary {
@@ -8411,6 +8853,26 @@ body.cfe-theme-applied .cfe-person-cell > span {
     gap: 2px;
 }
 
+body.cfe-theme-applied .cfe-people-controls {
+    min-height: 64px;
+}
+
+body.cfe-theme-applied .cfe-people-controls select {
+    width: 170px;
+    flex: 0 0 170px;
+}
+
+body.cfe-theme-applied .cfe-people-table > header,
+body.cfe-theme-applied .cfe-people-table > a {
+    grid-template-columns: minmax(240px, 1fr) 110px 150px 110px;
+}
+
+body.cfe-theme-applied .cfe-roster-footer {
+    padding: 16px 0;
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
 body.cfe-theme-applied .cfe-pages-grid {
     display: grid;
     grid-template-columns: minmax(330px, .82fr) minmax(450px, 1.18fr);
@@ -8496,7 +8958,31 @@ body.cfe-theme-applied .cfe-progress-track i {
 
 body.cfe-theme-applied .cfe-assignment-controls > div {
     display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
     gap: 8px;
+}
+
+body.cfe-theme-applied .cfe-assignment-controls label {
+    position: relative;
+    min-width: 0;
+    flex: 1 1 0;
+}
+
+body.cfe-theme-applied .cfe-assignment-controls .cfe-search-icon {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 12px;
+    color: var(--cfe-muted);
+    font-size: 15px;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+body.cfe-theme-applied .cfe-assignment-controls input {
+    min-height: 36px !important;
+    padding-left: 36px !important;
 }
 
 body.cfe-theme-applied .cfe-assignment-controls button,
@@ -8518,12 +9004,70 @@ body.cfe-theme-applied .cfe-assignment-controls button.is-active {
     border-color: transparent !important;
 }
 
+body.cfe-theme-applied .cfe-assignment-controls [data-cfe-more-filters] {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+body.cfe-theme-applied .cfe-assignment-more-filters {
+    margin: -12px 0 20px;
+    padding: 12px;
+    background: var(--cfe-surface-alt);
+    border-radius: 0 0 10px 10px;
+}
+
+body.cfe-theme-applied .cfe-assignment-more-filters[hidden] {
+    display: none !important;
+}
+
+body.cfe-theme-applied .cfe-assignment-more-filters label {
+    display: grid;
+    max-width: 240px;
+    gap: 6px;
+    color: var(--cfe-text);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+body.cfe-theme-applied .cfe-assignment-more-filters select {
+    min-height: 36px !important;
+    margin: 0 !important;
+    color: var(--cfe-text) !important;
+    background: var(--cfe-surface) !important;
+    border: 1px solid var(--cfe-border) !important;
+    border-radius: 6px !important;
+    font-size: 11px !important;
+}
+
+body.cfe-theme-applied .cfe-assignment-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+    padding: 16px 0;
+    color: var(--cfe-muted);
+    border-top: 1px solid var(--cfe-divider);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-assignment-footer span:last-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+body.cfe-theme-applied .cfe-assignment-footer i {
+    font-style: normal;
+}
+
 body.cfe-theme-applied .cfe-grade-filters {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
     gap: 12px;
-    margin-bottom: 18px;
-    padding: 14px;
+    margin-bottom: 20px;
+    padding: 16px;
     background: var(--cfe-surface-alt);
     border-radius: 10px;
 }
@@ -8537,13 +9081,183 @@ body.cfe-theme-applied .cfe-grade-filters label {
 }
 
 body.cfe-theme-applied :where(.cfe-grade-filters select, .cfe-people-workspace select) {
-    min-height: 38px !important;
+    min-height: 40px !important;
     margin: 0 !important;
     padding: 0 10px !important;
     color: var(--cfe-text) !important;
     background: var(--cfe-surface) !important;
     border: 1px solid var(--cfe-border) !important;
     border-radius: 6px !important;
+    font-size: 10px !important;
+}
+
+body.cfe-theme-applied .cfe-grade-export {
+    display: inline-flex;
+    height: 40px;
+    align-self: end;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    color: var(--cfe-text) !important;
+    background: var(--cfe-surface);
+    border: 1px solid var(--cfe-border);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none !important;
+}
+
+body.cfe-theme-applied .cfe-current-total {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    background: var(--cfe-accent-soft);
+    border-radius: 10px;
+}
+
+body.cfe-theme-applied .cfe-current-total div {
+    display: grid;
+    gap: 2px;
+}
+
+body.cfe-theme-applied .cfe-current-total span {
+    color: var(--cfe-accent);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+body.cfe-theme-applied .cfe-current-total small {
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-current-total strong {
+    color: var(--cfe-accent-strong);
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+}
+
+body.cfe-theme-applied .cfe-grade-table-card {
+    min-width: 0;
+    overflow: hidden;
+    background: var(--cfe-surface);
+    border: 1px solid var(--cfe-border);
+    border-radius: 10px;
+}
+
+body.cfe-theme-applied .cfe-grade-table-heading {
+    display: flex;
+    min-height: 60px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-grade-table-heading h2 {
+    margin: 0;
+    color: var(--cfe-text);
+    font-family: var(--cfe-font-body);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+body.cfe-theme-applied .cfe-grade-table-heading p {
+    margin: 2px 0 0;
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-grade-table-heading > span {
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-grade-table-card .cfe-data-table {
+    overflow-x: auto;
+    border: 0;
+    border-radius: 0;
+}
+
+body.cfe-theme-applied .cfe-grade-table-card .cfe-data-table > header,
+body.cfe-theme-applied .cfe-grade-table-card .cfe-data-table > a {
+    min-width: 720px;
+    grid-template-columns: minmax(240px, 1fr) 100px 110px 72px 72px;
+}
+
+body.cfe-theme-applied .cfe-grade-table-card .cfe-data-table > header > :nth-child(4),
+body.cfe-theme-applied .cfe-grade-table-card .cfe-data-table > header > :nth-child(5),
+body.cfe-theme-applied .cfe-grade-table-card .cfe-data-table > a > :nth-child(4),
+body.cfe-theme-applied .cfe-grade-table-card .cfe-data-table > a > :nth-child(5) {
+    justify-self: end;
+    text-align: right;
+}
+
+body.cfe-theme-applied .cfe-grade-table-card .cfe-data-table > a > :last-child {
+    color: var(--cfe-muted);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-what-if > h3 {
+    margin: 0;
+}
+
+body.cfe-theme-applied .cfe-what-if > p {
+    margin: 5px 0 0;
+    line-height: 1.6;
+}
+
+body.cfe-theme-applied .cfe-what-if label {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    color: var(--cfe-text);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+body.cfe-theme-applied .cfe-what-if input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 36px;
+    margin: 0;
+    padding: 0 12px;
+    color: var(--cfe-text);
+    background: var(--cfe-surface);
+    border: 1px solid var(--cfe-border);
+    border-radius: 6px;
+    font-size: 11px;
+}
+
+body.cfe-theme-applied .cfe-what-if > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--cfe-divider);
+}
+
+body.cfe-theme-applied .cfe-what-if > div strong {
+    color: var(--cfe-accent-strong);
+    font-size: 14px;
+}
+
+body.cfe-theme-applied .cfe-what-if button {
+    width: 100%;
+    height: 36px;
+    min-height: 36px !important;
+    margin-top: 12px;
+    color: var(--cfe-text) !important;
+    background: var(--cfe-surface) !important;
+    border: 1px solid var(--cfe-border) !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
     font-size: 10px !important;
 }
 
@@ -8594,6 +9308,10 @@ body.cfe-theme-applied .cfe-course-home-grid {
     grid-template-columns: minmax(0, 1fr) 224px;
     align-items: start;
     gap: 24px;
+}
+
+body.cfe-theme-applied .cfe-course-home-experience {
+    max-width: none;
 }
 
 body.cfe-theme-applied .cfe-course-home-main {
@@ -8667,6 +9385,42 @@ body.cfe-theme-applied .cfe-course-welcome > span {
     font-weight: 600;
 }
 
+body.cfe-theme-applied :where(
+    .cfe-course-welcome,
+    .cfe-module-item,
+    .cfe-course-home-row,
+    .cfe-course-quick-links,
+    .cfe-course-context-panel,
+    .cfe-announcement-attachment,
+    .cfe-announcement-row-icon,
+    .cfe-assignment-controls,
+    .cfe-assignment-group,
+    .cfe-assignment-footer
+) svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+body.cfe-theme-applied :where(
+    [data-cfe-module-toggle],
+    [data-cfe-assignment-group-toggle]
+) svg {
+    transition: transform 140ms ease;
+}
+
+body.cfe-theme-applied :where(
+    [data-cfe-module-toggle],
+    [data-cfe-assignment-group-toggle]
+).is-collapsed svg {
+    transform: rotate(-90deg);
+}
+
 body.cfe-theme-applied .cfe-course-welcome h2,
 body.cfe-theme-applied .cfe-course-home-card h2,
 body.cfe-theme-applied .cfe-course-quick-links h2 {
@@ -8692,6 +9446,38 @@ body.cfe-theme-applied .cfe-course-home-card > header a {
     font-size: 10px;
     font-weight: 600;
     text-decoration: none !important;
+}
+
+body.cfe-theme-applied .cfe-course-home-empty {
+    display: flex;
+    min-height: 88px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px;
+    text-align: left;
+}
+
+body.cfe-theme-applied .cfe-course-home-empty > span {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    place-items: center;
+    color: var(--cfe-muted);
+    background: var(--cfe-surface-alt);
+    border-radius: 999px;
+}
+
+body.cfe-theme-applied .cfe-course-home-empty strong {
+    color: var(--cfe-text);
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-course-home-empty p {
+    margin: 3px 0 0;
+    color: var(--cfe-muted);
+    font-size: 9px;
 }
 
 body.cfe-theme-applied .cfe-course-home-card {
@@ -8863,6 +9649,86 @@ body.cfe-theme-applied .cfe-contact strong {
     font-size: 10px;
 }
 
+body.cfe-theme-applied .cfe-course-context-panel a.cfe-context-button {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    color: var(--cfe-text) !important;
+    background: var(--cfe-surface);
+    border: 1px solid var(--cfe-border);
+    border-radius: 6px;
+    font-size: 10px;
+}
+
+body.cfe-theme-applied .cfe-course-context-panel a.cfe-context-inline-action {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 11px;
+}
+
+body.cfe-theme-applied .cfe-context-button svg,
+body.cfe-theme-applied .cfe-context-inline-action svg,
+body.cfe-theme-applied .cfe-course-tool-links svg,
+body.cfe-theme-applied .cfe-context-icon svg {
+    width: 13px;
+    height: 13px;
+}
+
+body.cfe-theme-applied .cfe-context-icon {
+    color: var(--cfe-muted);
+}
+
+body.cfe-theme-applied .cfe-feedback-loading {
+    display: grid;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+body.cfe-theme-applied .cfe-feedback-loading i {
+    display: block;
+    height: 6px;
+    background: var(--cfe-divider);
+    border-radius: 999px;
+}
+
+body.cfe-theme-applied .cfe-feedback-loading i:nth-child(1) { width: 70%; }
+body.cfe-theme-applied .cfe-feedback-loading i:nth-child(2) { width: 88%; }
+body.cfe-theme-applied .cfe-feedback-loading i:nth-child(3) { width: 56%; }
+
+body.cfe-theme-applied .cfe-feedback-loading small {
+    margin-top: 2px;
+    color: var(--cfe-muted);
+    font-size: 8px;
+}
+
+body.cfe-theme-applied .cfe-context-empty {
+    display: grid;
+    gap: 4px;
+    padding: 12px 4px 4px;
+    text-align: center;
+}
+
+body.cfe-theme-applied .cfe-context-empty strong {
+    color: var(--cfe-text);
+    font-size: 9px;
+}
+
+body.cfe-theme-applied .cfe-context-empty small {
+    color: var(--cfe-muted);
+    font-size: 8px;
+    line-height: 1.5;
+}
+
+body.cfe-theme-applied .cfe-course-context-panel .cfe-course-tool-links > a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 body.cfe-theme-applied .cfe-page-index,
 body.cfe-theme-applied .cfe-page-reader {
     overflow: hidden;
@@ -8926,6 +9792,30 @@ body.cfe-theme-applied .cfe-page-index button {
     border-radius: 0 !important;
     box-shadow: none !important;
     text-align: left;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+body.cfe-theme-applied .cfe-page-index button > :not(.cfe-page-link-icon) {
+    grid-column: 1;
+}
+
+body.cfe-theme-applied .cfe-page-index .cfe-page-link-icon {
+    grid-row: 1 / 3;
+    grid-column: 2;
+    align-self: center;
+    color: var(--cfe-accent);
+}
+
+body.cfe-theme-applied .cfe-page-index .cfe-page-link-icon svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transform: rotate(-90deg);
 }
 
 body.cfe-theme-applied .cfe-page-index button:hover,
@@ -9001,20 +9891,118 @@ body.cfe-theme-applied .cfe-page-body :where(h1, h2, h3) {
     font-weight: 600 !important;
 }
 
+/* Exact Course Home shell from the approved Superdesign draft. Canvas adds a
+   centered 1120px content cap and a canvas-colored wrapper unless both are
+   reset at the final cascade layer. */
+@media (min-width: 1024px) {
+    html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-course #wrapper {
+        width: calc(100% - 80px) !important;
+        margin-left: 80px !important;
+    }
+
+    html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-course .ic-app-nav-toggle-and-crumbs,
+    html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-course #main.ic-Layout-columns {
+        width: calc(100% - 208px) !important;
+        margin-left: 208px !important;
+    }
+
+    html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-course #left-side {
+        left: -208px !important;
+        width: 208px !important;
+        min-width: 208px !important;
+    }
+
+    html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-course #left-side #sticky-container {
+        width: 208px !important;
+    }
+}
+
+html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-course .ic-Layout-contentWrapper {
+    min-width: 0 !important;
+    background: var(--cfe-surface) !important;
+}
+
+html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-course #content.ic-Layout-contentMain {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    background: var(--cfe-surface) !important;
+}
+
+html.cfe-data-experience-active body.cfe-theme-applied.cfe-page-course-home .cfe-course-home-experience {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+/* Each approved Superdesign route uses its own reading measure. Keep the
+   Canvas shell full-width and center only the route experience. */
+body.cfe-theme-applied .cfe-announcements-experience {
+    max-width: 1056px !important;
+}
+
+body.cfe-theme-applied .cfe-discussions-experience {
+    max-width: 1192px !important;
+}
+
+body.cfe-theme-applied .cfe-discussions-experience .cfe-announcements-grid {
+    grid-template-columns: 390px minmax(0, 1fr);
+}
+
+body.cfe-theme-applied .cfe-people-experience {
+    max-width: 1080px !important;
+}
+
+body.cfe-theme-applied .cfe-syllabus-experience {
+    max-width: 1056px !important;
+}
+
+@media (max-width: 1100px) {
+    body.cfe-theme-applied .cfe-discussions-experience .cfe-announcements-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+body.cfe-theme-applied.cfe-page-course-home #immersive_reader_mount_point {
+    display: none !important;
+}
+
+body.cfe-theme-applied :where(
+    .cfe-course-welcome,
+    .cfe-course-home-card,
+    .cfe-course-quick-links a
+) {
+    border-color: var(--cfe-hairline, var(--cfe-border)) !important;
+}
+
 @media (max-width: 1100px) {
     body.cfe-theme-applied .cfe-pages-grid {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    body.cfe-theme-applied .cfe-module-workspace,
-    body.cfe-theme-applied .cfe-grade-workspace,
-    body.cfe-theme-applied .cfe-people-workspace {
+body.cfe-theme-applied .cfe-module-workspace,
+body.cfe-theme-applied .cfe-grade-workspace,
+body.cfe-theme-applied .cfe-people-workspace {
         grid-template-columns: minmax(0, 1fr);
     }
 
     body.cfe-theme-applied .cfe-course-home-grid {
         grid-template-columns: minmax(0, 1fr);
     }
+}
+
+body.cfe-theme-applied .cfe-grade-workspace {
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: 20px;
+}
+
+body.cfe-theme-applied .cfe-grades-experience {
+    width: 100% !important;
+    max-width: 1124px !important;
+    margin-right: auto !important;
+    margin-left: auto !important;
 }
 
 @media (max-width: 760px) {

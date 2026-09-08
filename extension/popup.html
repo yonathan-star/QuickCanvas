@@ -6,7 +6,7 @@
         <title>QuickCanvas</title>
         <link rel="stylesheet" href="popup.css" />
     </head>
-    <body>
+    <body class="is-signed-out">
         <main class="app">
             <header class="top">
                 <div class="top-row">
@@ -309,17 +309,18 @@
             </section>
 
             <footer class="popup-footer" data-pane="themes">
-                <span>QuickCanvas 0.8.8</span>
+                <span>QuickCanvas 0.9.9</span>
                 <button id="popupSettingsHelp" type="button">Settings &amp; help</button>
             </footer>
 
-            <section class="panel" data-pane="account" hidden>
-                <div class="panel-header">
-                    <h2>Account</h2>
+            <section class="panel auth-panel" data-pane="account" hidden>
+                <div class="auth-intro">
+                    <p class="panel-kicker">QuickCanvas account</p>
+                    <h2>Welcome to your workspace</h2>
+                    <p id="authGateNotice" class="hint">
+                        Sign in with your email and password.
+                    </p>
                 </div>
-                <p id="authGateNotice" class="hint">
-                    Sign in or create an account to unlock QuickCanvas.
-                </p>
                 <div id="authModeSwitch" class="segmented">
                     <button
                         id="authModeSignIn"

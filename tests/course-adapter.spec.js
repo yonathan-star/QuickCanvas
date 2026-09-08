@@ -30,21 +30,23 @@ function fixture(activeSection, duplicateCount = 6) {
   return `<!doctype html>
     <html><head><title>${activeSection} · AP Calculus AB</title><style>${contentStyles}</style></head><body>
       <div class="ic-app-crumbs"><ol class="ic-app-crumbs__crumbs">
-        <li><a href="/courses/10585">AP Calculus AB</a></li>
+        <li><a href="/courses/10585">AP Calculus AB Per C-1233-ALL-Kibler</a></li>
         <li class="ic-app-crumbs__crumb--current">${activeSection}</li>
       </ol></div>
       <div class="ic-Layout-columns">
         <aside id="left-side"><div class="course-navigation">${identities}
           <ul id="section-tabs">
-            ${sections.map((section) => `<li class="section ${activeSection === section ? "active" : ""}"><a>${section}</a></li>`).join("")}
+            ${sections.map((section) => `<li class="section ${activeSection === section ? "active" : ""}"><a href="/courses/10585/${section === "Home" ? "" : section.toLowerCase()}">${section}</a></li>`).join("")}
           </ul>
         </div></aside>
-        <main id="content" class="ic-Layout-contentMain">
-          <div class="ic-Action-header"><h1>AP Calculus AB Per C-1233</h1></div>
-          <article id="course_syllabus"><h2>Course information</h2><p>Policies and expectations.</p></article>
-          ${activeSection === "Panopto Recordings" ? '<div class="tool_content_wrapper"><iframe id="tool_content_642" name="tool_content_642" src="about:blank"></iframe></div>' : ""}
-        </main>
-        <aside id="right-side"><section id="cfe-course-widget-board">Wrong home widgets</section></aside>
+        <div class="ic-Layout-contentWrapper">
+          <main id="content" class="ic-Layout-contentMain">
+            <div class="ic-Action-header"><h1>AP Calculus AB Per C-1233</h1></div>
+            <article id="course_syllabus"><h2>Course information</h2><p>Policies and expectations.</p></article>
+            ${/Panopto Recordings|Google Drive|Mystery Tool/.test(activeSection) ? '<div class="tool_content_wrapper"><iframe id="tool_content_642" name="tool_content_642" src="about:blank"></iframe></div>' : ""}
+          </main>
+          <aside id="right-side"><section id="cfe-course-widget-board">Wrong home widgets</section></aside>
+        </div>
       </div>
     </body></html>`;
 }
@@ -116,6 +118,43 @@ async function runCase(browser, url, activeSection, options = {}) {
         ]),
       });
     }
+    if (requestUrl.pathname.endsWith("/api/v1/courses/10585/discussion_topics/51/view")) {
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          view: [
+            {
+              id: 501,
+              user_name: "Ada Student",
+              created_at: "2026-09-01T13:00:00Z",
+              message: "<p>I compared both strategies.</p>",
+            },
+          ],
+        }),
+      });
+    }
+    if (requestUrl.pathname.endsWith("/api/v1/courses/10585/discussion_topics/51")) {
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: 51,
+          title: "Field lab moved",
+          message: "<p>Meet at the east entrance.</p>",
+          posted_at: "2026-08-31T13:00:00Z",
+          pinned: true,
+          read_state: "unread",
+          author: { display_name: "Dr. Test" },
+          html_url: "https://canvas.test/courses/10585/announcements/51",
+          attachments: [
+            {
+              display_name: "field-map.pdf",
+              content_type: "application/pdf",
+              url: "https://canvas.test/files/71/download",
+            },
+          ],
+        }),
+      });
+    }
     const collectionFixtures = {
       "/api/v1/courses/10585/modules": [{ id: 1, name: "Limits", published: true, items: [{ id: 11, title: "Limits overview", type: "Page", html_url: "https://canvas.test/courses/10585/pages/limits" }] }],
       "/api/v1/courses/10585/assignment_groups": [{ id: 4, name: "Practice" }],
@@ -125,6 +164,7 @@ async function runCase(browser, url, activeSection, options = {}) {
       "/api/v1/courses/10585/files": [{ id: 12, display_name: "Review guide.pdf", size: 20480, modified_at: "2026-09-01T13:00:00Z", content_type: "application/pdf", url: "https://canvas.test/files/12/download" }],
       "/api/v1/courses/10585/pages": [{ url: "limits", title: "Limits overview", front_page: true, updated_at: "2026-09-01T13:00:00Z", html_url: "https://canvas.test/courses/10585/pages/limits" }],
       "/api/v1/courses/10585/pages/limits": { url: "limits", title: "Limits overview", updated_at: "2026-09-01T13:00:00Z", body: "<h2>Learning goals</h2><p>Evaluate limits graphically.</p>", html_url: "https://canvas.test/courses/10585/pages/limits" },
+      "/api/v1/courses/10585/groups": [{ id: 31, name: "Calculus Study Group", members_count: 4 }],
     };
     if (Object.hasOwn(collectionFixtures, requestUrl.pathname)) {
       return route.fulfill({ contentType: "application/json", body: JSON.stringify(collectionFixtures[requestUrl.pathname]) });
@@ -134,11 +174,12 @@ async function runCase(browser, url, activeSection, options = {}) {
         contentType: "application/json",
         body: JSON.stringify({
           id: 10585,
-          name: "AP Calculus AB",
-          course_code: "AP CALC AB",
+          name: "AP Calculus AB Per C-1233-ALL-Kibler",
+          course_code: "AP Calculus AB Per C-1233-ALL-Kibler",
           workflow_state: "available",
           updated_at: "2026-08-31T13:00:00Z",
           term: { name: "2026 ALL" },
+          sections: [{ id: 3, name: "Period C-1233" }],
           teachers: [{ display_name: "Mrs. Kibler" }],
           syllabus_body:
             "<h2>Course overview</h2><p>Limits, derivatives, and integrals.</p><h2>Course policies</h2><p>Submit work through Canvas.</p>",
@@ -159,12 +200,71 @@ async function runCase(browser, url, activeSection, options = {}) {
   });
   await page.waitForTimeout(1900);
 
+  const isExternalTool = /\/external_tools\//.test(new URL(url).pathname);
+  const isNativeWorkflow = options.apiFailure || isExternalTool || /\/(?:assignments|discussion_topics|quizzes)\/\d+/.test(new URL(url).pathname);
+  const dataExperienceKinds = {
+    Home: "course-home",
+    Modules: "modules",
+    Assignments: "assignments",
+    Discussions: "discussions",
+    Grades: "grades",
+    People: "people",
+    Pages: "pages",
+    Files: "files",
+    Quizzes: "quizzes",
+    Announcements: "announcements",
+    Syllabus: "syllabus",
+  };
+  const expectedDataKind = new URL(url).searchParams.get("quickcanvas_home") === "1"
+    ? "course-home"
+    : dataExperienceKinds[activeSection];
+  const expectedExperience = isExternalTool
+    ? ".cfe-tool-toolbar"
+    : isNativeWorkflow
+      ? ".cfe-course-page-header"
+      : `[data-cfe-experience="${expectedDataKind}"]`;
+  try {
+    await page.locator(expectedExperience).first().waitFor({
+      state: "visible",
+      timeout: 12000,
+    });
+  } catch (error) {
+    const adapterState = await page.evaluate(() => ({
+      href: window.location.href,
+      title: document.title,
+      activeSection: document.querySelector("#section-tabs .section.active")?.textContent,
+      currentCrumb: document.querySelector(".ic-app-crumbs__crumb--current")?.textContent,
+      bodyClasses: document.body.className,
+      experiences: Array.from(
+        document.querySelectorAll(".cfe-course-data-experience"),
+      ).map((node) => ({
+        kind: node.getAttribute("data-cfe-experience"),
+        className: node.className,
+        text: String(node.textContent || "").trim().slice(0, 120),
+      })),
+    }));
+    console.error("Course adapter wait state:", adapterState);
+    throw error;
+  }
+  if (activeSection === "Announcements") {
+    await page.locator(".cfe-announcement-attachment").first().waitFor({
+      state: "visible",
+      timeout: 5000,
+    });
+  }
+  if (activeSection === "Discussions" && !isNativeWorkflow) {
+    await page.locator(".cfe-discussion-reply").first().waitFor({
+      state: "visible",
+      timeout: 5000,
+    });
+  }
+
   if (process.env.CFE_CAPTURE_DIR) {
     fs.mkdirSync(process.env.CFE_CAPTURE_DIR, { recursive: true });
     await page.screenshot({
       path: path.join(
         process.env.CFE_CAPTURE_DIR,
-        `${activeSection.toLowerCase()}-experience.png`,
+        `${expectedDataKind || activeSection.toLowerCase()}-experience.png`,
       ),
       fullPage: true,
     });
@@ -192,6 +292,9 @@ async function runCase(browser, url, activeSection, options = {}) {
       ),
       courseHome: document.body.classList.contains("cfe-page-course-home"),
       title: document.querySelector("#content h1")?.textContent,
+      contentWrapperBackground: getComputedStyle(
+        document.querySelector(".ic-Layout-contentWrapper"),
+      ).backgroundColor,
       hasWrongHomeWidgets: Boolean(
         document.querySelector("#cfe-course-widget-board"),
       ),
@@ -209,21 +312,52 @@ async function runCase(browser, url, activeSection, options = {}) {
       announcementRows: document.querySelectorAll(
         ".cfe-announcement-row",
       ).length,
+      announcementAttachments: document.querySelectorAll(
+        ".cfe-announcement-attachment",
+      ).length,
+      discussionReplies: document.querySelectorAll(
+        ".cfe-discussion-reply",
+      ).length,
       collectionRows: document.querySelectorAll(
         "[data-cfe-collection-row], [data-cfe-announcement-id]",
       ).length,
       experienceTitle: document.querySelector(".cfe-course-data-experience h1")?.textContent,
+      courseIdentityTitle: document.querySelector(".cfe-course-identity-title")?.textContent,
+      courseHomeSvgIcons: document.querySelectorAll(
+        ".cfe-course-home-experience svg",
+      ).length,
+      courseHomeMessageAction: Boolean(
+        document.querySelector(".cfe-context-inline-action"),
+      ),
       injectedHeaderCopies: document.querySelectorAll(
         ".cfe-course-data-experience .cfe-course-page-copy",
       ).length,
       adaptedHeaderCount: document.querySelectorAll(".cfe-course-page-header").length,
       adaptedCopyCount: document.querySelectorAll(".cfe-course-page-copy").length,
+      visibleExternalNativeHeaders: Array.from(
+        document.querySelectorAll("#content > .cfe-external-native-hidden"),
+      ).filter((node) => getComputedStyle(node).display !== "none").length,
       toolbars: document.querySelectorAll(".cfe-tool-toolbar").length,
       toolFrameHosts: document.querySelectorAll(".cfe-tool-frame-host").length,
       toolStatePanels: document.querySelectorAll(".cfe-tool-states").length,
       pageTypeClasses: Array.from(document.body.classList).filter((name) =>
         name.startsWith("cfe-page-"),
       ),
+      courseNavLabels: Array.from(
+        document.querySelectorAll("#section-tabs > .section, #section-tabs > .cfe-course-tools-label"),
+      ).map((node) => String(node.textContent || "").trim()),
+      courseNavLinkHeight:
+        document.querySelector("#section-tabs .section a")?.getBoundingClientRect().height || 0,
+      activeCourseNav:
+        document.querySelector("#section-tabs .section.active")?.textContent.trim() || "",
+      identityLabelVisible:
+        document.querySelector(".cfe-course-identity-label")?.getBoundingClientRect().height > 0,
+      assignmentFiltersOverlap: (() => {
+        const input = document.querySelector("[data-cfe-collection-search]");
+        const firstFilter = document.querySelector("[data-cfe-assignment-filter]");
+        if (!input || !firstFilter) return false;
+        return input.getBoundingClientRect().right > firstFilter.getBoundingClientRect().left;
+      })(),
       moduleCollapsed:
         document.querySelector("[data-cfe-module-toggle]")?.getAttribute("aria-expanded") === "false" &&
         Boolean(document.querySelector("[data-cfe-module-items]")?.hidden),
@@ -231,6 +365,9 @@ async function runCase(browser, url, activeSection, options = {}) {
         !document.querySelector("[data-cfe-collection-search]") ||
         Array.from(document.querySelectorAll("[data-cfe-collection-row]"))
           .every((row) => row.hidden),
+      assignmentControls:
+        document.querySelectorAll("[data-cfe-assignment-group-toggle]").length &&
+        Boolean(document.querySelector("[data-cfe-more-filters]")),
       horizontalOverflow:
         document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
       bodyClasses: document.body.className,
@@ -253,13 +390,28 @@ async function runCase(browser, url, activeSection, options = {}) {
     );
     assert.equal(syllabus.identityCount, 1);
     assert.equal(syllabus.identityIsImmediatelyBeforeTabs, true);
+    assert.equal(syllabus.courseNavLinkHeight, 36);
+    assert.equal(syllabus.identityLabelVisible, false);
     assert.equal(syllabus.syllabus, true);
     assert.equal(syllabus.courseHome, false);
     assert.equal(syllabus.title, "Course Syllabus");
     assert.equal(syllabus.hasWrongHomeWidgets, false);
     assert.equal(syllabus.dataExperience, "syllabus");
     assert.equal(syllabus.nativeHidden, true);
+    assert.equal(syllabus.contentWrapperBackground, "rgb(255, 255, 255)");
     assert.match(syllabus.syllabusBody, /Limits, derivatives/);
+    assert.deepEqual(syllabus.courseNavLabels.slice(0, 10), [
+      "Home",
+      "Announcements",
+      "Modules",
+      "Assignments",
+      "Quizzes",
+      "Discussions",
+      "Grades",
+      "People",
+      "Pages",
+      "Files",
+    ]);
 
     const announcements = await runCase(
       browser,
@@ -274,6 +426,7 @@ async function runCase(browser, url, activeSection, options = {}) {
     assert.equal(announcements.nativeHidden, true);
     assert.equal(announcements.announcementDetail, "Field lab moved");
     assert.equal(announcements.announcementRows, 2);
+    assert.equal(announcements.announcementAttachments, 1);
 
     const courseHome = await runCase(
       browser,
@@ -283,7 +436,22 @@ async function runCase(browser, url, activeSection, options = {}) {
     assert.equal(courseHome.dataExperience, "course-home");
     assert.equal(courseHome.nativeHidden, true);
     assert.equal(courseHome.experienceTitle, "AP Calculus AB");
+    assert.equal(courseHome.courseIdentityTitle, "AP Calculus AB");
+    assert.ok(courseHome.courseHomeSvgIcons >= 8);
+    assert.equal(courseHome.courseHomeMessageAction, true);
     assert.equal(courseHome.horizontalOverflow, false);
+
+    const forcedCourseHome = await runCase(
+      browser,
+      "https://canvas.test/courses/10585?quickcanvas_home=1",
+      "Syllabus",
+    );
+    assert.equal(forcedCourseHome.courseHome, true);
+    assert.equal(forcedCourseHome.syllabus, false);
+    assert.equal(forcedCourseHome.dataExperience, "course-home");
+    assert.equal(forcedCourseHome.activeCourseNav, "Home");
+    assert.equal(forcedCourseHome.experienceTitle, "AP Calculus AB");
+    assert.equal(forcedCourseHome.horizontalOverflow, false);
 
     const routeCases = [
       ["modules", "Modules", "Modules"],
@@ -307,6 +475,18 @@ async function runCase(browser, url, activeSection, options = {}) {
       assert.equal(current.experienceTitle, title, `${section}: wrong title`);
       assert.ok(current.collectionRows >= 1, `${section}: no data rows rendered`);
       assert.equal(current.horizontalOverflow, false, `${section}: horizontal overflow`);
+      assert.equal(
+        current.contentWrapperBackground,
+        "rgb(255, 255, 255)",
+        `${section}: course workspace is not flush white`,
+      );
+      if (section === "Assignments") {
+        assert.ok(current.assignmentControls, "Assignments: approved group/filter controls missing");
+        assert.equal(current.assignmentFiltersOverlap, false, "Assignments: search and filters overlap");
+      }
+      if (section === "Discussions") {
+        assert.equal(current.discussionReplies, 1, "Discussions: replies were not hydrated");
+      }
       assert.equal(
         current.injectedHeaderCopies,
         0,
@@ -344,11 +524,24 @@ async function runCase(browser, url, activeSection, options = {}) {
     assert.equal(mobile.dataExperience, "pages");
     assert.equal(mobile.horizontalOverflow, false, "Pages: mobile horizontal overflow");
 
+    const canonicalSyllabus = await runCase(
+      browser,
+      "https://canvas.test/courses/10585/assignments/syllabus",
+      "Syllabus",
+    );
+    assert.equal(canonicalSyllabus.dataExperience, "syllabus");
+    assert.deepEqual(canonicalSyllabus.pageTypeClasses.sort(), [
+      "cfe-page-course",
+      "cfe-page-syllabus",
+    ]);
+
     const nativeCases = [
       ["assignments/7", "Assignments", "cfe-page-assignment-detail"],
       ["discussion_topics/51", "Discussions", "cfe-page-discussion-detail"],
       ["quizzes/10", "Quizzes", "cfe-quiz-page"],
       ["external_tools/65", "Panopto Recordings", "cfe-page-media-tool"],
+      ["external_tools/66", "Google Drive", "cfe-page-collaboration-tool"],
+      ["external_tools/67", "Mystery Tool", "cfe-page-custom-tool"],
     ];
     for (const [pathName, section, expectedClass] of nativeCases) {
       const current = await runCase(
@@ -360,12 +553,16 @@ async function runCase(browser, url, activeSection, options = {}) {
       assert.equal(current.nativeHidden, false, `${section}: native workflow was hidden`);
       assert.match(current.bodyClasses, new RegExp(`(?:^|\\s)${expectedClass}(?:\\s|$)`));
       assert.equal(current.horizontalOverflow, false, `${section}: horizontal overflow`);
-      assert.equal(current.adaptedHeaderCount, 1, `${section}: header adapter repeated`);
-      assert.equal(current.adaptedCopyCount, 1, `${section}: header copy repeated`);
-      if (section === "Panopto Recordings") {
-        assert.equal(current.toolbars, 1, "Panopto: toolbar missing or repeated");
-        assert.equal(current.toolFrameHosts, 1, "Panopto: frame host missing or repeated");
-        assert.equal(current.toolStatePanels, 1, "Panopto: state panel missing or repeated");
+      if (pathName.startsWith("external_tools/")) {
+        assert.equal(current.adaptedHeaderCount, 0, `${section}: duplicate page header remains`);
+        assert.equal(current.adaptedCopyCount, 0, `${section}: duplicate page copy remains`);
+        assert.equal(current.visibleExternalNativeHeaders, 0, `${section}: native header is visible`);
+        assert.equal(current.toolbars, 1, `${section}: toolbar missing or repeated`);
+        assert.equal(current.toolFrameHosts, 1, `${section}: frame host missing or repeated`);
+        assert.equal(current.toolStatePanels, 1, `${section}: state panel missing or repeated`);
+      } else {
+        assert.equal(current.adaptedHeaderCount, 1, `${section}: header adapter repeated`);
+        assert.equal(current.adaptedCopyCount, 1, `${section}: header copy repeated`);
       }
     }
 

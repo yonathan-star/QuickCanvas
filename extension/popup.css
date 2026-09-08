@@ -175,6 +175,10 @@ h2 { margin: 0; color: var(--text); font: 700 16px/1.15 var(--font-head); }
 .tabs:has(#adminTab[hidden]) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+body.is-signed-out .tabs,
+.tabs:has(.tab[data-tab="themes"][hidden]):has(#adminTab[hidden]) {
+    display: none;
+}
 .tab {
     min-width: 0;
     height: 34px;
@@ -200,6 +204,44 @@ h2 { margin: 0; color: var(--text); font: 700 16px/1.15 var(--font-head); }
     border-radius: var(--radius-lg);
     background: var(--surface);
     box-shadow: var(--shadow);
+}
+body.is-signed-out .auth-panel {
+    order: 3;
+    margin-top: 10px;
+    padding: 18px 16px;
+}
+body.is-signed-out .auth-panel .auth-intro h2 {
+    font-size: 19px;
+}
+body.is-signed-out .auth-panel #authGateNotice {
+    margin-top: 6px;
+    font-size: 11px;
+}
+body.is-signed-out .auth-panel #authModeSwitch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    margin-top: 14px;
+    border-radius: 10px;
+}
+body.is-signed-out .auth-panel #authModeSwitch .segmented-btn {
+    min-height: 34px;
+    border-radius: 7px;
+}
+body.is-signed-out .auth-panel .field {
+    margin-top: 13px;
+}
+body.is-signed-out .auth-panel input {
+    min-height: 43px;
+    background: var(--bg-2);
+}
+body.is-signed-out .auth-panel .actions {
+    margin-top: 15px;
+}
+body.is-signed-out .auth-panel .actions .primary,
+body.is-signed-out .auth-panel .actions .secondary {
+    width: 100%;
+    min-height: 41px;
 }
 .connection-panel { order: 3; }
 .connection-card-head { align-items: flex-start; justify-content: space-between; gap: 10px; }

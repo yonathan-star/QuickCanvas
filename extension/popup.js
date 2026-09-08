@@ -5491,6 +5491,7 @@ async function loadAdminThemes(options = {}) {
 
 function updateAuthUI(session) {
   const signedIn = Boolean(getEffectiveSession(session));
+  document.body.classList.toggle("is-signed-out", !signedIn);
   syncAuthGateFromSession(session);
   isUiSignedIn = signedIn;
   const unlocked = signedIn;

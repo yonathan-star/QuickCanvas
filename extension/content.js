@@ -1,5 +1,5 @@
 ﻿(() => {
-  const CONTENT_BUILD = "0.8.9";
+  const CONTENT_BUILD = "0.9.9";
   const scriptInstanceId = `cfe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   window.__cfeActiveInstanceId = scriptInstanceId;
   document.documentElement.dataset.cfeBuild = CONTENT_BUILD;
@@ -31,6 +31,7 @@
   let passiveRouteSyncBound = false;
   let routeWatcherIntervalId = null;
   let passiveRouteSyncIntervalId = null;
+  let passiveRouteSyncHandler = null;
   let dashboardLayoutPersistTimer = null;
   let dashboardStorageSyncListener = null;
   let dashboardPageHideListener = null;
@@ -132,6 +133,8 @@
 
   function getCourseRouteContext(pathname) {
     const path = String(pathname || "/").toLowerCase();
+    const forceCourseHome =
+      new URLSearchParams(window.location.search).get("quickcanvas_home") === "1";
     const courseMatch = path.match(/^\/courses\/([^/]+)(?:\/(.*))?$/);
     const courseTail = String(courseMatch?.[2] || "").replace(/\/+$/, "");
     const semanticText = [
@@ -149,27 +152,35 @@
       courseMatch &&
         /^(external_tools|external_content|lti)(\/|$)/.test(courseTail),
     );
-    const isAssignmentDetail = /^assignments\/[^/]+(\/|$)/.test(courseTail);
+    const isSyllabusPath = /^(syllabus|assignments\/syllabus)(\/|$)/.test(
+      courseTail,
+    );
+    const isAssignmentDetail =
+      !isSyllabusPath && /^assignments\/[^/]+(\/|$)/.test(courseTail);
     const isDiscussionDetail = /^(discussion_topics|discussions)\/[^/]+(\/|$)/.test(
       courseTail,
     );
     const isAnnouncementDetail =
       isDiscussionDetail && /\bannouncement\b/.test(semanticText);
+    const isNativeCollaborationTool = /^(collaborations?|conferences?)(\/|$)/.test(
+      courseTail,
+    );
     const isMediaTool =
       isExternalTool &&
       /(panopto|studio|recordings?|media gallery|mediasite|kaltura|video library)/.test(
         semanticText,
       );
     const isCollaborationTool =
-      isExternalTool &&
-      /(collaborations?|conferences?|google drive|microsoft teams|zoom)/.test(
-        semanticText,
-      );
+      isNativeCollaborationTool ||
+      (isExternalTool &&
+        /(collaborations?|conferences?|google drive|microsoft teams|zoom)/.test(
+          semanticText,
+        ));
     const isCourseRoot = Boolean(courseMatch && !courseTail);
     // Canvas can render a configured course home (most notably Syllabus) at
     // /courses/:id instead of the section's canonical URL. Use the active
     // Canvas navigation/breadcrumb semantics so the correct page adapter wins.
-    const rootSection = isCourseRoot
+    const rootSection = isCourseRoot && !forceCourseHome
       ? {
           announcements: /\bannouncements?\b/.test(semanticText),
           assignments: /\bassignments?\b/.test(semanticText),
@@ -186,7 +197,7 @@
 
     return {
       isCourse: Boolean(courseMatch),
-      isCourseHome: Boolean(isCourseRoot && !hasSemanticRootSection),
+      isCourseHome: Boolean(isCourseRoot && (forceCourseHome || !hasSemanticRootSection)),
       isAssignmentDetail,
       isDiscussionDetail: isDiscussionDetail && !isAnnouncementDetail,
       isAnnouncements:
@@ -194,7 +205,8 @@
         rootSection.announcements ||
         isAnnouncementDetail,
       isAssignments:
-        /^(assignments)(\/|$)/.test(courseTail) || rootSection.assignments,
+        (!isSyllabusPath && /^(assignments)(\/|$)/.test(courseTail)) ||
+        rootSection.assignments,
       isDiscussions:
         !isAnnouncementDetail &&
         (/^(discussion_topics|discussions)(\/|$)/.test(courseTail) ||
@@ -210,8 +222,7 @@
         /^(quizzes|assignment_quizzes)(\/|$)/.test(courseTail) ||
         rootSection.quizzes,
       isSyllabus:
-        /^(syllabus|assignments\/syllabus)(\/|$)/.test(courseTail) ||
-        rootSection.syllabus,
+        isSyllabusPath || rootSection.syllabus,
       isExternalTool,
       isMediaTool,
       isCollaborationTool,
@@ -335,6 +346,18 @@
       eyebrow: "Assessment",
       description: "Instructions, attempts, progress, and assessment feedback.",
     },
+    "cfe-page-media-tool": {
+      eyebrow: "Media & recordings",
+      description: "Course videos and recordings provided through Canvas.",
+    },
+    "cfe-page-collaboration-tool": {
+      eyebrow: "Course collaboration",
+      description: "Shared sessions, documents, and collaboration tools.",
+    },
+    "cfe-page-custom-tool": {
+      eyebrow: "Course tool",
+      description: "A school-provided tool connected securely through Canvas.",
+    },
     "cfe-page-external-tool": {
       eyebrow: "External course tool",
       description: "Provided by your school and opened securely within Canvas.",
@@ -379,6 +402,67 @@
     status.innerHTML = '<i aria-hidden="true"></i>Active course';
     identity.append(label, title, status);
     return identity;
+  }
+
+  function organizeCourseNavigation(sectionTabs) {
+    if (!sectionTabs) return;
+    sectionTabs
+      .querySelectorAll(":scope > .cfe-course-tools-label")
+      .forEach((node) => node.remove());
+    const items = Array.from(sectionTabs.querySelectorAll(":scope > .section"));
+    if (!items.length) return;
+    const coreOrder = [
+      /^home$/i,
+      /^announcements?$/i,
+      /^modules?$/i,
+      /^assignments?$/i,
+      /^(quizzes|assessments)$/i,
+      /^discussions?$/i,
+      /^grades?$/i,
+      /^people$/i,
+      /^(pages|files|pages\s*&\s*files)$/i,
+      /^syllabus$/i,
+    ];
+    const labelFor = (item) =>
+      String(item.textContent || "").replace(/\s+/g, " ").trim();
+    const orderedCore = [];
+    const claimed = new Set();
+    coreOrder.forEach((pattern) => {
+      items.forEach((item) => {
+        if (!claimed.has(item) && pattern.test(labelFor(item))) {
+          claimed.add(item);
+          orderedCore.push(item);
+        }
+      });
+    });
+    const external = items.filter((item) => !claimed.has(item));
+    orderedCore.forEach((item) => sectionTabs.appendChild(item));
+    if (external.length) {
+      const label = document.createElement("li");
+      label.className = "cfe-course-tools-label";
+      label.textContent = "External tools";
+      sectionTabs.appendChild(label);
+      external.forEach((item) => sectionTabs.appendChild(item));
+    }
+  }
+
+  function syncCourseNavigationState(sectionTabs, route) {
+    if (!sectionTabs || !route) return;
+    const items = Array.from(sectionTabs.querySelectorAll(":scope > .section"));
+    const homeItem = items.find(
+      (item) => String(item.textContent || "").replace(/\s+/g, " ").trim().toLowerCase() === "home",
+    );
+    if (!homeItem) return;
+    if (route.isCourseHome) {
+      items.forEach((item) => item.classList.toggle("active", item === homeItem));
+      sectionTabs.querySelectorAll('[aria-current="page"]').forEach((node) => {
+        node.removeAttribute("aria-current");
+      });
+      homeItem.querySelector("a")?.setAttribute("aria-current", "page");
+      return;
+    }
+    homeItem.classList.remove("active");
+    homeItem.querySelector("a")?.removeAttribute("aria-current");
   }
 
   function ensureCoursePageHeader(courseName) {
@@ -483,6 +567,15 @@
         "#tool_content, #external_tool, .tool_content_wrapper, .external-tool-content, [data-testid*='external-tool']",
       ) || frame;
     const parent = host?.parentElement;
+    document
+      .querySelectorAll(
+        "#content > .cfe-course-page-header, #content > .ic-Action-header, #content > header",
+      )
+      .forEach((node) => {
+        if (!node.classList.contains("cfe-tool-toolbar")) {
+          node.classList.add("cfe-external-native-hidden");
+        }
+      });
     const existingToolbar = document.querySelector("#content > .cfe-tool-toolbar");
     if (!host || existingToolbar) {
       return;
@@ -507,7 +600,7 @@
       <div class="cfe-tool-toolbar-actions">
         <span class="cfe-tool-connected"><i aria-hidden="true"></i>Connected</span>
         <button type="button" data-cfe-tool-action="reload">Reload</button>
-        <button type="button" data-cfe-tool-action="fullscreen" aria-label="Enter fullscreen">⛶</button>
+        <button type="button" data-cfe-tool-action="fullscreen" aria-label="Enter fullscreen">${courseGlyph("expand")}</button>
         <a data-cfe-tool-action="open" target="_blank" rel="noopener noreferrer">Open in new window</a>
       </div>`;
     host.before(toolbar);
@@ -575,6 +668,15 @@
       });
     });
     return template.innerHTML;
+  }
+
+  function plainTextFromHtml(value) {
+    const node = document.createElement("div");
+    node.innerHTML = String(value || "");
+    return String(node.textContent || "")
+      .replace(/\u00a0/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function formatCourseDate(value, options = {}) {
@@ -735,13 +837,9 @@
         const author = announcementAuthorName(topic);
         const active = String(topic?.id) === String(selectedId);
         const unread = topic?.read_state !== "read";
-        const excerpt = String(topic?.message || "")
-          .replace(/<[^>]*>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 120);
+        const excerpt = plainTextFromHtml(topic?.message).slice(0, 120);
         return `<button type="button" class="cfe-announcement-row${active ? " is-active" : ""}" data-cfe-announcement-id="${escapeAttr(String(topic?.id || ""))}">
-          <span class="cfe-announcement-row-icon">${topic?.pinned ? "●" : "○"}</span>
+          <span class="cfe-announcement-row-icon">${topic?.pinned ? courseGlyph("pin") : courseGlyph("message")}</span>
           <span class="cfe-announcement-row-copy"><strong>${escapeHtml(topic?.title || "Announcement")}</strong><small>${escapeHtml(excerpt || "Open to read this announcement.")}</small><em>${escapeHtml(author)} · ${escapeHtml(formatCourseDate(topic?.posted_at || topic?.created_at))}</em></span>
           ${unread ? '<i class="cfe-unread-dot" aria-label="Unread"></i>' : ""}
         </button>`;
@@ -749,7 +847,7 @@
       .join("");
   }
 
-  function announcementDetailHtml(topic) {
+  function announcementDetailHtml(topic, isDiscussion = false) {
     if (!topic) {
       return '<div class="cfe-announcement-empty"><h2>No announcements found</h2><p>Try another search or filter.</p></div>';
     }
@@ -757,10 +855,28 @@
     const posted = formatCourseDate(topic?.posted_at || topic?.created_at, {
       includeYear: true,
     });
+    const attachments = (Array.isArray(topic?.attachments) ? topic.attachments : [])
+      .filter(Boolean)
+      .map(
+        (attachment) =>
+          `<a class="cfe-announcement-attachment" href="${escapeAttr(sanitizeHref(attachment?.url || attachment?.preview_url || "#"))}"><span>${courseGlyph("file")}</span><p><strong>${escapeHtml(attachment?.display_name || attachment?.filename || "Attachment")}</strong><small>${escapeHtml(attachment?.content_type || "Course attachment")}</small></p></a>`,
+      )
+      .join("");
+    const replyEntries = (Array.isArray(topic?._cfeView?.view) ? topic._cfeView.view : [])
+      .filter(Boolean)
+      .slice(0, 12);
+    const replies = replyEntries
+      .map((entry) => {
+        const name = String(entry?.user_name || entry?.display_name || "Course participant");
+        return `<article class="cfe-discussion-reply"><span>${escapeHtml(announcementInitials(name))}</span><div><header><strong>${escapeHtml(name)}</strong><small>${escapeHtml(formatCourseDate(entry?.created_at, { includeYear: true }))}</small></header><div class="user_content">${sanitizeCanvasRichHtml(entry?.message || "")}</div></div></article>`;
+      })
+      .join("");
     return `<article class="cfe-announcement-detail">
       <header><div class="cfe-announcement-badges">${topic?.pinned ? "<span>Pinned</span>" : ""}${topic?.read_state !== "read" ? "<span>Unread</span>" : ""}</div><h2>${escapeHtml(topic?.title || "Announcement")}</h2><div class="cfe-announcement-author"><span>${escapeHtml(announcementInitials(author))}</span><p><strong>${escapeHtml(author)}</strong><small>Posted ${escapeHtml(posted || "in Canvas")}</small></p></div></header>
       <div class="cfe-announcement-message user_content">${sanitizeCanvasRichHtml(topic?.message || "")}</div>
-      <footer><a href="${escapeAttr(sanitizeHref(topic?.html_url || window.location.href))}">Open in Canvas</a></footer>
+      ${attachments ? `<section class="cfe-announcement-attachments"><h3>Attachments</h3>${attachments}</section>` : ""}
+      ${isDiscussion && replies ? `<section class="cfe-discussion-replies"><header><h3>Replies</h3><span>${replyEntries.length} recent</span></header>${replies}</section>` : ""}
+      <footer><button type="button" data-cfe-detail-previous>Previous</button><a href="${escapeAttr(sanitizeHref(topic?.html_url || window.location.href))}">Open in Canvas</a><button type="button" data-cfe-detail-next>Next</button></footer>
     </article>`;
   }
 
@@ -777,6 +893,7 @@
     let filterText = "";
     let filterMode = "all";
     let sortMode = "recent";
+    const hydratedIds = new Set();
     const root = document.createElement("section");
     root.className = `cfe-course-data-experience cfe-${plural}-experience`;
     root.dataset.cfeExperience = plural;
@@ -824,14 +941,60 @@
       if (detail) {
         detail.innerHTML = announcementDetailHtml(
           safeTopics.find((topic) => String(topic.id) === activeId),
+          isDiscussion,
         );
       }
       list?.querySelectorAll("[data-cfe-announcement-id]").forEach((button) => {
         button.addEventListener("click", () => {
           activeId = button.getAttribute("data-cfe-announcement-id") || "";
           draw();
+          void hydrateDetail(activeId);
         });
       });
+      const visibleTopics = orderedTopics.filter((topic) =>
+        visibleIds.includes(String(topic?.id || "")),
+      );
+      const activeIndex = visibleTopics.findIndex(
+        (topic) => String(topic?.id || "") === activeId,
+      );
+      const moveDetail = (offset) => {
+        if (!visibleTopics.length) return;
+        const nextIndex = Math.max(
+          0,
+          Math.min(visibleTopics.length - 1, activeIndex + offset),
+        );
+        activeId = String(visibleTopics[nextIndex]?.id || "");
+        draw();
+        void hydrateDetail(activeId);
+      };
+      const previous = detail?.querySelector("[data-cfe-detail-previous]");
+      const next = detail?.querySelector("[data-cfe-detail-next]");
+      if (previous) {
+        previous.disabled = activeIndex <= 0;
+        previous.addEventListener("click", () => moveDetail(-1));
+      }
+      if (next) {
+        next.disabled = activeIndex < 0 || activeIndex >= visibleTopics.length - 1;
+        next.addEventListener("click", () => moveDetail(1));
+      }
+    };
+    const hydrateDetail = async (topicId) => {
+      const id = String(topicId || "");
+      if (!id || hydratedIds.has(id) || !options.courseId) return;
+      hydratedIds.add(id);
+      const endpoint = isDiscussion
+        ? `${window.location.origin}/api/v1/courses/${options.courseId}/discussion_topics/${id}/view`
+        : `${window.location.origin}/api/v1/courses/${options.courseId}/discussion_topics/${id}`;
+      try {
+        const response = await fetchCanvasJson(endpoint);
+        const topic = safeTopics.find((item) => String(item?.id || "") === id);
+        if (!topic) return;
+        if (isDiscussion) topic._cfeView = response;
+        else Object.assign(topic, response);
+        if (activeId === id) draw();
+      } catch (error) {
+        // The list view remains fully usable when a school blocks detail APIs.
+      }
     };
     root.querySelector("input[type='search']")?.addEventListener("input", (event) => {
       filterText = event.target.value || "";
@@ -861,6 +1024,7 @@
       });
     }
     draw();
+    void hydrateDetail(activeId);
     return root;
   }
 
@@ -901,26 +1065,88 @@
     return root;
   }
 
-  function renderCourseHomeExperience(course, modules, assignments, announcements, courseName, courseId) {
+  function friendlyCourseLabel(value) {
+    return String(value || "")
+      .replace(/\s+Per\s+[A-Z]-?\d+(?:-[A-Z0-9]+)*(?:-[A-Za-z][A-Za-z'’-]*)?\s*$/i, "")
+      .replace(/\s+-\s+(?:Section|Period)\s+[A-Z0-9-]+\s*$/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function courseGlyph(type) {
+    const normalized = String(type || "").toLowerCase();
+    const paths = normalized.includes("expand") || normalized.includes("fullscreen")
+      ? '<path d="M8 4H4v4M16 4h4v4M20 16v4h-4M4 16v4h4"/>'
+      : normalized.includes("search")
+      ? '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/>'
+      : normalized.includes("chevron")
+        ? '<path d="m7 9 5 5 5-5"/>'
+        : normalized.includes("more")
+          ? '<circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/>'
+          : normalized.includes("info") || normalized.includes("help")
+            ? '<circle cx="12" cy="12" r="9"/><path d="M12 11.5v5M12 7.5h.01"/>'
+            : normalized.includes("pin")
+              ? '<path d="m9 4 6 0-.8 5 2.8 3H7l2.8-3L9 4Z"/><path d="M12 12v8"/>'
+              : normalized.includes("quiz") || normalized.includes("check")
+      ? '<path d="m8 12 2.4 2.4L16 8.8"/><path d="M6 3.8h12v16.4H6z"/>'
+      : normalized.includes("discussion") || normalized.includes("message")
+        ? '<path d="M4 5.5h16v11H9l-5 4v-15Z"/><path d="M8 9h8M8 12.5h5"/>'
+        : normalized.includes("grade") || normalized.includes("chart")
+          ? '<path d="M5 19V9m7 10V5m7 14v-7"/>'
+          : normalized.includes("people") || normalized.includes("group")
+            ? '<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19c.7-3.2 2.5-4.8 5.5-4.8s4.8 1.6 5.5 4.8M15 14.5c2.8.1 4.4 1.6 5 4.5"/>'
+            : normalized.includes("calendar")
+              ? '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7.5 3v4M16.5 3v4M3.5 9.5h17"/>'
+              : normalized.includes("file")
+                ? '<path d="M6 3.5h8l4 4V21H6z"/><path d="M14 3.5v4h4M9 12h6M9 16h6"/>'
+                : normalized.includes("external")
+                  ? '<path d="M13 4h7v7M20 4l-9 9"/><path d="M18 14v6H4V6h6"/>'
+                  : normalized.includes("module") || normalized.includes("assignment") || normalized === "none"
+                    ? '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'
+                    : '<path d="M5 4.5h14v15H5z"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>';
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths}</svg>`;
+  }
+
+  function renderCourseHomeExperience(course, modules, assignments, announcements, groups, courseName, courseId) {
     const safeModules = Array.isArray(modules) ? modules.filter(Boolean) : [];
     const safeAssignments = (Array.isArray(assignments) ? assignments : [])
       .filter(Boolean)
       .sort((a, b) => new Date(a?.due_at || 0) - new Date(b?.due_at || 0));
-    const safeAnnouncements = (Array.isArray(announcements) ? announcements : []).filter(Boolean);
+    const safeAnnouncements = (Array.isArray(announcements) ? announcements : [])
+      .filter(Boolean)
+      .sort((a, b) => new Date(b?.posted_at || b?.created_at || 0) - new Date(a?.posted_at || a?.created_at || 0));
+    const safeGroups = (Array.isArray(groups) ? groups : []).filter(Boolean);
     const teacher = (Array.isArray(course?.teachers) ? course.teachers : [])[0];
     const allItems = safeModules.flatMap((module) => module?.items || []);
     const required = allItems.filter((item) => item?.completion_requirement);
     const completed = required.filter((item) => item?.completion_requirement?.completed).length;
     const progress = required.length ? Math.round((completed / required.length) * 100) : 0;
+    const section = (Array.isArray(course?.sections) ? course.sections : [])[0];
+    const now = Date.now();
+    const upcomingAssignments = safeAssignments.filter((assignment) => {
+      const due = new Date(assignment?.due_at || "").getTime();
+      const workflow = String(assignment?.submission?.workflow_state || "").toLowerCase();
+      return Number.isFinite(due) && due >= now - 24 * 60 * 60 * 1000 && !["submitted", "graded"].includes(workflow);
+    });
+    const dueSoon = (upcomingAssignments.length
+      ? upcomingAssignments
+      : safeAssignments.filter((assignment) => Number.isFinite(new Date(assignment?.due_at || "").getTime())))
+      .slice(0, 3);
+    const recentFeedback = safeAssignments
+      .filter((assignment) => assignment?.submission?.score !== null && assignment?.submission?.score !== undefined)
+      .sort((a, b) => new Date(b?.submission?.graded_at || b?.submission?.submitted_at || 0) - new Date(a?.submission?.graded_at || a?.submission?.submitted_at || 0))
+      .slice(0, 3);
+    const displayName = friendlyCourseLabel(course?.name || courseName) || courseName;
+    const displayCode = friendlyCourseLabel(course?.course_code || displayName) || displayName;
     const root = document.createElement("section");
     root.className = "cfe-course-data-experience cfe-course-home-experience";
     root.dataset.cfeExperience = "course-home";
-    root.innerHTML = `<div class="cfe-course-home-grid"><div class="cfe-course-home-main"><header class="cfe-course-home-header"><div><p class="cfe-data-eyebrow">${escapeHtml(course?.course_code || course?.term?.name || "Current course")}</p><h1>${escapeHtml(course?.name || courseName)}</h1><p>${escapeHtml([course?.term?.name, teacher?.display_name || teacher?.name].filter(Boolean).join(" · ") || "Your Canvas course workspace")}</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}"><span>Continue course</span><b aria-hidden="true">→</b></a></header>
-      <section class="cfe-course-welcome"><span>✓</span><div><h2>${safeModules[0]?.name ? `Continue ${escapeHtml(safeModules[0].name)}` : "Welcome to your course"}</h2><p>${safeModules[0]?.items?.length ? `${safeModules[0].items.length} learning items are available in this module.` : "Course materials, announcements, and upcoming work are organized below."}</p><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}">Open course modules →</a></div></section>
-      <section class="cfe-course-home-card"><header><div><h2>Recent announcements</h2><p>Updates from your instructor</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/announcements`)}">View all</a></header>${safeAnnouncements.slice(0, 3).map((topic) => `<a class="cfe-course-home-row" href="${escapeAttr(sanitizeHref(topic?.html_url || `${window.location.origin}/courses/${courseId}/announcements`))}"><i class="${topic?.read_state === "read" ? "" : "is-unread"}"></i><div><strong>${escapeHtml(topic?.title || "Course announcement")}</strong><p>${escapeHtml(String(topic?.message || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 150))}</p><small>${escapeHtml(announcementAuthorName(topic))} · ${escapeHtml(formatCourseDate(topic?.posted_at || topic?.created_at))}</small></div></a>`).join("") || '<div class="cfe-collection-empty">No recent announcements.</div>'}</section>
-      <section class="cfe-course-home-card"><header><div><h2>Due soon</h2><p>Your upcoming course work</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/assignments`)}">All assignments</a></header>${safeAssignments.slice(0, 4).map((assignment) => { const status = assignmentStatus(assignment); return `<a class="cfe-course-home-row is-assignment" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><span>${moduleItemIcon((assignment?.submission_types || [])[0] || "assignment")}</span><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><p>${escapeHtml(String(assignment?.points_possible ?? "—"))} points</p></div><em class="is-${status.tone}">${status.label === "Not submitted" ? escapeHtml(formatCourseDateTime(assignment?.due_at)) : escapeHtml(status.label)}</em></a>`; }).join("") || '<div class="cfe-collection-empty">No upcoming assignments.</div>'}</section>
-      <section class="cfe-course-quick-links"><h2>Quick links</h2><div>${[["Modules", "modules", "▤"], ["Grades", "grades", "▥"], ["Syllabus", "assignments/syllabus", "≡"], ["People", "users", "○"]].map(([label, route, icon]) => `<a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/${route}`)}"><span>${icon}</span>${label}</a>`).join("")}</div></section></div>
-      <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${progress}%</strong></header><div class="cfe-progress-track"><i style="width:${progress}%"></i></div><p>${completed} of ${required.length} required items complete</p><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}">View progress</a></section><section><header><h3>Course contacts</h3></header>${teacher ? `<div class="cfe-contact"><i>${escapeHtml(announcementInitials(teacher?.display_name || teacher?.name || "Instructor"))}</i><div><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Instructor")}</strong><small>Course instructor</small></div></div>` : "<p>Instructor information is available in Canvas.</p>"}</section><section><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/calendar?context_codes[]=course_${courseId}`)}">Course calendar</a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/files`)}">Course files</a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades`)}">Student grades</a></section></aside></div>`;
+    root.innerHTML = `<div class="cfe-course-home-grid"><div class="cfe-course-home-main"><header class="cfe-course-home-header"><div><p class="cfe-data-eyebrow">${escapeHtml([displayCode, course?.term?.name].filter(Boolean).join(" · ") || "Current course")}</p><h1>${escapeHtml(displayName)}</h1><p>${escapeHtml([section?.name, teacher?.display_name || teacher?.name].filter(Boolean).join(" · ") || "Your Canvas course workspace")}</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}"><b aria-hidden="true">→</b><span>Continue course</span></a></header>
+      <section class="cfe-course-welcome"><span>${moduleItemIcon(safeModules[0]?.items?.[0]?.type || "page")}</span><div><h2>${safeModules[0]?.name ? `Welcome to ${escapeHtml(safeModules[0].name)}` : "Welcome to your course"}</h2><p>${safeModules[0]?.items?.length ? `${safeModules[0].items.length} learning items are ready in your current module. Continue where you left off or review the summary below.` : "Course materials, announcements, and upcoming work are organized below."}</p><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}">Open current module →</a></div></section>
+      <section class="cfe-course-home-card"><header><div><h2>Recent announcements</h2><p>Updates from your instructor</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/announcements`)}">View all</a></header>${safeAnnouncements.slice(0, 2).map((topic) => `<a class="cfe-course-home-row" href="${escapeAttr(sanitizeHref(topic?.html_url || `${window.location.origin}/courses/${courseId}/announcements`))}"><i class="${topic?.read_state === "read" ? "" : "is-unread"}"></i><div><strong>${escapeHtml(topic?.title || "Course announcement")}</strong><p>${escapeHtml(plainTextFromHtml(topic?.message).slice(0, 150))}</p><small>${escapeHtml(announcementAuthorName(topic))} · ${escapeHtml(formatCourseDate(topic?.posted_at || topic?.created_at))}</small></div></a>`).join("") || `<div class="cfe-course-home-empty"><span>${courseGlyph("message")}</span><div><strong>You’re all caught up</strong><p>No recent announcements from your instructor.</p></div></div>`}</section>
+      <section class="cfe-course-home-card"><header><div><h2>Due soon</h2><p>Your upcoming course work</p></div><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/assignments`)}">All assignments</a></header>${dueSoon.map((assignment) => { const status = assignmentStatus(assignment); return `<a class="cfe-course-home-row is-assignment" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><span>${moduleItemIcon((assignment?.submission_types || [])[0] || "assignment")}</span><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><p>${escapeHtml(String(assignment?.points_possible ?? "—"))} points</p></div><em class="is-${status.tone}">${status.label === "Not submitted" ? escapeHtml(formatCourseDateTime(assignment?.due_at)) : escapeHtml(status.label)}</em></a>`; }).join("") || '<div class="cfe-collection-empty">No upcoming assignments.</div>'}</section>
+      <section class="cfe-course-quick-links"><h2>Quick links</h2><div>${[["Modules", "modules", "module"], ["Grades", "grades", "grades"], ["Syllabus", "assignments/syllabus", "file"], ["People", "users", "people"]].map(([label, route, icon]) => `<a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/${route}`)}"><span>${courseGlyph(icon)}</span>${label}</a>`).join("")}</div></section></div>
+      <aside class="cfe-course-context-panel"><section><header><h3>Course progress</h3><strong>${progress}%</strong></header><div class="cfe-progress-track"><i style="width:${progress}%"></i></div><p>${completed} of ${required.length} required items complete</p><a class="cfe-context-button" href="${escapeAttr(`${window.location.origin}/courses/${courseId}/modules`)}">${courseGlyph("chart")}<span>View progress</span></a></section><section><header><h3>Course contacts</h3><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/users`)}">People</a></header>${teacher ? `<div class="cfe-contact"><i>${escapeHtml(announcementInitials(teacher?.display_name || teacher?.name || "Instructor"))}</i><div><strong>${escapeHtml(teacher?.display_name || teacher?.name || "Instructor")}</strong><small>Course instructor</small></div></div><a class="cfe-context-inline-action" href="${escapeAttr(`${window.location.origin}/conversations?context_id=course_${courseId}`)}">${courseGlyph("message")}<span>Message instructor</span></a>` : "<p>Instructor information is available in Canvas.</p>"}</section><section><header><h3>Recent feedback</h3></header>${recentFeedback.map((assignment) => `<a href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))} points</small></a>`).join("") || '<div class="cfe-feedback-loading"><i></i><i></i><i></i><small>No recent feedback yet</small></div>'}</section><section><header><h3>Study groups</h3><span class="cfe-context-icon">${courseGlyph("people")}</span></header>${safeGroups.slice(0, 3).map((group) => `<a href="${escapeAttr(`${window.location.origin}/groups/${group.id}`)}"><strong>${escapeHtml(group?.name || "Course group")}</strong><small>${group?.members_count != null ? `${escapeHtml(String(group.members_count))} members` : "Open group"}</small></a>`).join("") || '<div class="cfe-context-empty"><strong>No groups assigned</strong><small>Your instructor has not created course groups yet.</small></div>'}</section><section class="cfe-course-tool-links"><header><h3>Course tools</h3></header><a href="${escapeAttr(`${window.location.origin}/calendar?context_codes[]=course_${courseId}`)}">${courseGlyph("calendar")}<span>Course calendar</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/files`)}">${courseGlyph("file")}<span>Course files</span></a><a href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades`)}">${courseGlyph("help")}<span>Course help</span></a></section></aside></div>`;
     return root;
   }
 
@@ -939,12 +1165,7 @@
   }
 
   function moduleItemIcon(type) {
-    const normalized = String(type || "").toLowerCase();
-    if (normalized.includes("quiz")) return "✓";
-    if (normalized.includes("assignment")) return "▣";
-    if (normalized.includes("discussion")) return "◌";
-    if (normalized.includes("file")) return "▤";
-    return "•";
+    return courseGlyph(type);
   }
 
   function renderModulesExperience(modules, courseName) {
@@ -964,7 +1185,7 @@
             (item) => item?.completion_requirement?.completed,
           ).length;
           return `<section class="cfe-module-card" data-cfe-module>
-            <header><button type="button" data-cfe-module-toggle aria-expanded="true">⌄</button><div><h2>${escapeHtml(module?.name || `Module ${moduleIndex + 1}`)}</h2><p>${items.length} items${items.length ? ` · ${completed}/${items.length} complete` : ""}</p></div><span>${module?.state === "completed" ? "Complete" : module?.published === false ? "Unpublished" : "Published"}</span></header>
+            <header><button type="button" data-cfe-module-toggle aria-expanded="true">${courseGlyph("chevron")}</button><div><h2>${escapeHtml(module?.name || `Module ${moduleIndex + 1}`)}</h2><p>${items.length} items${items.length ? ` · ${completed}/${items.length} complete` : ""}</p></div><span>${module?.state === "completed" ? "Complete" : module?.published === false ? "Unpublished" : "Published"}</span></header>
             <div data-cfe-module-items>${items.length ? items.map((item) => `<a class="cfe-module-item" data-cfe-collection-row href="${escapeAttr(sanitizeHref(item?.html_url || item?.url || "#"))}"><span>${moduleItemIcon(item?.type)}</span><div><strong>${escapeHtml(item?.title || "Module item")}</strong><small>${escapeHtml(item?.type || "Content")}</small></div><em>${item?.completion_requirement?.completed ? "Completed" : item?.completion_requirement ? "To do" : ""}</em></a>`).join("") : '<div class="cfe-collection-empty">No items in this module.</div>'}</div>
           </section>`;
         })
@@ -977,7 +1198,7 @@
         const items = card?.querySelector("[data-cfe-module-items]");
         const expanded = button.getAttribute("aria-expanded") !== "false";
         button.setAttribute("aria-expanded", String(!expanded));
-        button.textContent = expanded ? "›" : "⌄";
+        button.classList.toggle("is-collapsed", expanded);
         if (items) items.hidden = expanded;
       });
     });
@@ -1044,29 +1265,61 @@
     });
     root.insertAdjacentHTML(
       "beforeend",
-      `<div class="cfe-collection-controls cfe-assignment-controls"><label><span class="screenreader-only">Search assignments</span><input data-cfe-collection-search type="search" placeholder="Search assignments"></label><div role="group" aria-label="Filter assignments"><button class="is-active" type="button" data-cfe-assignment-filter="all">All assignments</button><button type="button" data-cfe-assignment-filter="upcoming">Upcoming</button><button type="button" data-cfe-assignment-filter="past">Past</button></div></div>
+      `<div class="cfe-collection-controls cfe-assignment-controls"><label><span class="screenreader-only">Search assignments</span><span class="cfe-search-icon" aria-hidden="true">${courseGlyph("search")}</span><input data-cfe-collection-search type="search" placeholder="Search assignments"></label><div role="group" aria-label="Filter assignments"><button class="is-active" type="button" data-cfe-assignment-filter="all">All assignments</button><button type="button" data-cfe-assignment-filter="upcoming">Upcoming</button><button type="button" data-cfe-assignment-filter="past">Past</button><button type="button" data-cfe-more-filters aria-expanded="false"><span aria-hidden="true">${courseGlyph("more")}</span>More filters</button></div></div>
+      <div class="cfe-assignment-more-filters" data-cfe-more-filters-panel hidden><label>Status<select data-cfe-assignment-status><option value="all">Any status</option><option value="success">Submitted or graded</option><option value="warning">Due soon or late</option><option value="danger">Missing or overdue</option><option value="muted">Not submitted</option></select></label></div>
       <div class="cfe-assignment-groups">${Array.from(grouped.entries())
-        .map(([groupId, items]) => `<section class="cfe-assignment-group"><header><div><h2>${escapeHtml(groupNames.get(groupId) || "Assignments")}</h2><p>${items.length} assignments · ${items.reduce((sum, item) => sum + Number(item?.points_possible || 0), 0)} points</p></div></header><div class="cfe-assignment-columns"><span>Assignment</span><span>Due</span><span>Availability</span><span>Points</span><span>Status</span></div>${items.map((assignment) => {
+        .map(([groupId, items], groupIndex) => `<section class="cfe-assignment-group" data-cfe-assignment-group><header><button class="cfe-assignment-group-toggle" type="button" data-cfe-assignment-group-toggle aria-expanded="true" aria-label="Collapse ${escapeAttr(groupNames.get(groupId) || "Assignments")}"><span aria-hidden="true">${courseGlyph("chevron")}</span></button><div><h2 id="cfe-assignment-group-${groupIndex}">${escapeHtml(groupNames.get(groupId) || "Assignments")}</h2><p>${items.length} assignments · ${items.reduce((sum, item) => sum + Number(item?.points_possible || 0), 0)} points</p></div><button class="cfe-assignment-group-menu" type="button" aria-label="${escapeAttr(groupNames.get(groupId) || "Assignments")} group options"><span aria-hidden="true">${courseGlyph("more")}</span></button></header><div data-cfe-assignment-group-body><div class="cfe-assignment-columns"><span>Assignment</span><span>Due</span><span>Availability</span><span>Points</span><span>Status</span></div>${items.map((assignment) => {
           const status = assignmentStatus(assignment);
           const dueTime = new Date(assignment?.due_at || "").getTime();
           const timing = Number.isFinite(dueTime) && dueTime < Date.now() ? "past" : "upcoming";
           const submissionTypes = Array.isArray(assignment?.submission_types)
             ? assignment.submission_types.join(", ").replaceAll("_", " ")
             : "Course work";
-          return `<a class="cfe-assignment-row" data-cfe-collection-row data-cfe-assignment-timing="${timing}" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(submissionTypes)}</small></div><span>${escapeHtml(formatCourseDateTime(assignment?.due_at))}</span><span>${escapeHtml(assignmentAvailability(assignment))}</span><span>${escapeHtml(String(assignment?.points_possible ?? "—"))}</span><em class="is-${status.tone}">${escapeHtml(status.label)}</em></a>`;
-        }).join("")}</section>`)
-        .join("") || '<div class="cfe-collection-empty">No assignments are available yet.</div>'}</div>`,
+          return `<a class="cfe-assignment-row" data-cfe-collection-row data-cfe-assignment-timing="${timing}" data-cfe-assignment-status="${status.tone}" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><div><span class="cfe-assignment-kind" aria-hidden="true">${moduleItemIcon((assignment?.submission_types || [])[0] || "assignment")}</span><span><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(submissionTypes)}</small></span></div><span>${escapeHtml(formatCourseDateTime(assignment?.due_at))}</span><span>${escapeHtml(assignmentAvailability(assignment))}</span><span>${escapeHtml(String(assignment?.points_possible ?? "—"))}</span><em class="is-${status.tone}">${escapeHtml(status.label)}</em></a>`;
+        }).join("")}</div></section>`)
+        .join("") || '<div class="cfe-collection-empty">No assignments are available yet.</div>'}</div>
+      <footer class="cfe-assignment-footer"><span>${safeAssignments.length} assignments · ${safeAssignments.reduce((sum, item) => sum + Number(item?.points_possible || 0), 0)} points total</span><span><i aria-hidden="true">${courseGlyph("info")}</i>Availability dates may differ from due dates.</span></footer>`,
     );
-    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    let timingFilter = "all";
+    let statusFilter = "all";
+    const applyAssignmentFilters = () => {
+      const query = String(root.querySelector("[data-cfe-collection-search]")?.value || "").trim().toLowerCase();
+      root.querySelectorAll("[data-cfe-collection-row]").forEach((row) => {
+        const matchesQuery = !query || String(row.textContent || "").toLowerCase().includes(query);
+        const matchesTiming = timingFilter === "all" || row.getAttribute("data-cfe-assignment-timing") === timingFilter;
+        const matchesStatus = statusFilter === "all" || row.getAttribute("data-cfe-assignment-status") === statusFilter;
+        row.hidden = !(matchesQuery && matchesTiming && matchesStatus);
+      });
+    };
+    root.querySelector("[data-cfe-collection-search]")?.addEventListener("input", applyAssignmentFilters);
     root.querySelectorAll("[data-cfe-assignment-filter]").forEach((button) => {
       button.addEventListener("click", () => {
-        const mode = button.getAttribute("data-cfe-assignment-filter") || "all";
+        timingFilter = button.getAttribute("data-cfe-assignment-filter") || "all";
         root.querySelectorAll("[data-cfe-assignment-filter]").forEach((item) =>
           item.classList.toggle("is-active", item === button),
         );
-        root.querySelectorAll("[data-cfe-assignment-timing]").forEach((row) => {
-          row.hidden = mode !== "all" && row.getAttribute("data-cfe-assignment-timing") !== mode;
-        });
+        applyAssignmentFilters();
+      });
+    });
+    const moreButton = root.querySelector("[data-cfe-more-filters]");
+    const morePanel = root.querySelector("[data-cfe-more-filters-panel]");
+    moreButton?.addEventListener("click", () => {
+      const expanded = moreButton.getAttribute("aria-expanded") === "true";
+      moreButton.setAttribute("aria-expanded", String(!expanded));
+      if (morePanel) morePanel.hidden = expanded;
+    });
+    root.querySelector("[data-cfe-assignment-status]")?.addEventListener("change", (event) => {
+      statusFilter = event.currentTarget.value || "all";
+      applyAssignmentFilters();
+    });
+    root.querySelectorAll("[data-cfe-assignment-group-toggle]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const group = button.closest("[data-cfe-assignment-group]");
+        const body = group?.querySelector("[data-cfe-assignment-group-body]");
+        const expanded = button.getAttribute("aria-expanded") !== "false";
+        button.setAttribute("aria-expanded", String(!expanded));
+        button.classList.toggle("is-collapsed", expanded);
+        if (body) body.hidden = expanded;
       });
     });
     return root;
@@ -1074,7 +1327,11 @@
 
   function renderGradesExperience(assignments, groups, courseName) {
     const rows = (Array.isArray(assignments) ? assignments : []).filter(Boolean);
-    const scored = rows.filter((item) => Number.isFinite(Number(item?.submission?.score)));
+    const scored = rows.filter((item) =>
+      item?.submission?.score !== null &&
+      item?.submission?.score !== undefined &&
+      Number.isFinite(Number(item.submission.score)),
+    );
     const earned = scored.reduce(
       (sum, item) => sum + Number(item?.submission?.score || 0),
       0,
@@ -1084,24 +1341,56 @@
       0,
     );
     const percent = possible > 0 ? Math.round((earned / possible) * 1000) / 10 : null;
+    const groupRows = Array.isArray(groups) ? groups : [];
+    const groupNames = new Map(
+      groupRows.map((group) => [String(group?.id), group?.name || "Assignments"]),
+    );
+    const whatIfAssignment = rows.find(
+      (item) =>
+        Number(item?.points_possible || 0) > 0 &&
+        (item?.submission?.score === null || item?.submission?.score === undefined),
+    );
+    const courseId = getCourseIdFromPath(window.location.pathname);
     const root = createDataExperienceRoot({
       kind: "grades",
       eyebrow: "Student record",
       title: "Grades",
-      description: `Scores, feedback, and progress in ${courseName}.`,
+      description: courseName,
     });
+    root.querySelector(".cfe-data-page-header")?.insertAdjacentHTML(
+      "beforeend",
+      `<section class="cfe-current-total" aria-label="Current total"><div><span>Current total</span><small>Based on graded work</small></div><strong>${percent === null ? "—" : `${percent}%`}</strong></section>`,
+    );
     root.insertAdjacentHTML(
       "beforeend",
-      `<section class="cfe-grade-summary"><div><span>Current total</span><strong>${percent === null ? "—" : `${percent}%`}</strong><p>Based on graded work</p></div><div><span>Points earned</span><strong>${earned.toFixed(1)} / ${possible.toFixed(1)}</strong><p>${scored.length} graded assignments</p></div></section>
-      <div class="cfe-grade-filters"><label><span>Grading period</span><select><option>Current grading period</option></select></label><label><span>Assignment group</span><select><option>All assignment groups</option>${(Array.isArray(groups) ? groups : []).map((group) => `<option>${escapeHtml(group?.name || "Assignments")}</option>`).join("")}</select></label></div>
-      <div class="cfe-grade-workspace"><div><div class="cfe-collection-controls"><label><span class="screenreader-only">Search grades</span><input data-cfe-collection-search type="search" placeholder="Search graded work"></label><span>${rows.length} items</span></div>
-      <section class="cfe-data-table"><header><span>Assignment</span><span>Due</span><span>Status</span><span>Score</span></header>${rows.map((assignment) => {
+      `<div class="cfe-grade-filters"><label><span>Grading period</span><select><option>Current grading period</option></select></label><label><span>Assignment group</span><select data-cfe-grade-group><option value="all">All assignment groups</option>${groupRows.map((group) => `<option value="${escapeAttr(String(group?.id || ""))}">${escapeHtml(group?.name || "Assignments")}</option>`).join("")}</select></label><a class="cfe-grade-export" href="${escapeAttr(`${window.location.origin}/courses/${courseId}/grades.csv`)}" download>⇩ Export</a></div>
+      <div class="cfe-grade-workspace"><section class="cfe-grade-table-card"><header class="cfe-grade-table-heading"><div><h2>Assignment grades</h2><p>${rows.length} assignments · scores use tabular numerals</p></div><span>${scored.length ? `${scored.length} graded` : "No scores posted"}</span></header>
+      <div class="cfe-data-table"><header><span>Assignment</span><span>Due</span><span>Status</span><span>Score</span><span>Out of</span></header>${rows.map((assignment) => {
         const status = assignmentStatus(assignment);
         const score = assignment?.submission?.score;
-        return `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(String(assignment?.submission?.grade || ""))}</small></div><span>${escapeHtml(formatCourseDate(assignment?.due_at))}</span><em class="is-${status.tone}">${escapeHtml(status.label)}</em><b>${score === null || score === undefined ? "—" : escapeHtml(String(score))} / ${escapeHtml(String(assignment?.points_possible ?? "—"))}</b></a>`;
-      }).join("") || '<div class="cfe-collection-empty">No grade information is available.</div>'}</section></div><aside class="cfe-course-context-panel"><section><header><h3>Weighted groups</h3><span>100%</span></header>${(Array.isArray(groups) ? groups : []).slice(0, 5).map((group) => `<div class="cfe-weight-row"><p><span>${escapeHtml(group?.name || "Assignments")}</span><strong>${Math.round(Number(group?.group_weight || 0))}%</strong></p><div class="cfe-progress-track"><i style="width:${Math.min(100, Math.max(0, Number(group?.group_weight || 0)))}%"></i></div></div>`).join("") || "<p>Assignment groups are not weighted.</p>"}</section><section><header><h3>Score guide</h3></header><p>Submitted and graded work is included in the current total. Missing work may count as zero.</p></section></aside></div>`,
+        const hasScore = score !== null && score !== undefined && Number.isFinite(Number(score));
+        return `<a data-cfe-collection-row data-cfe-grade-group="${escapeAttr(String(assignment?.assignment_group_id || ""))}" href="${escapeAttr(sanitizeHref(assignment?.html_url || "#"))}"><div><strong>${escapeHtml(assignment?.name || "Assignment")}</strong><small>${escapeHtml(groupNames.get(String(assignment?.assignment_group_id)) || "Course work")}</small></div><span>${escapeHtml(formatCourseDate(assignment?.due_at) || "—")}</span><em class="is-${status.tone}">${escapeHtml(status.label)}</em><b>${hasScore ? escapeHtml(Number(score).toFixed(1)) : "—"}</b><span>${escapeHtml(String(assignment?.points_possible ?? "—"))}</span></a>`;
+      }).join("") || '<div class="cfe-collection-empty">No grade information is available.</div>'}</div></section><aside class="cfe-course-context-panel cfe-grade-sidebar"><section><header><h3>Weighted groups</h3><span>${Math.round(groupRows.reduce((sum, group) => sum + Number(group?.group_weight || 0), 0)) || 100}%</span></header>${groupRows.slice(0, 5).map((group) => { const members = rows.filter((item) => String(item?.assignment_group_id) === String(group?.id)); const groupScored = members.filter((item) => item?.submission?.score !== null && item?.submission?.score !== undefined && Number.isFinite(Number(item.submission.score))); const groupEarned = groupScored.reduce((sum, item) => sum + Number(item.submission.score), 0); const groupPossible = groupScored.reduce((sum, item) => sum + Number(item?.points_possible || 0), 0); const groupPercent = groupPossible ? Math.round((groupEarned / groupPossible) * 1000) / 10 : 0; return `<div class="cfe-weight-row"><p><span>${escapeHtml(group?.name || "Assignments")}</span><strong>${groupPercent}% · ${Math.round(Number(group?.group_weight || 0))}%</strong></p><div class="cfe-progress-track"><i style="width:${Math.min(100, Math.max(0, groupPercent))}%"></i></div></div>`; }).join("") || "<p>Assignment groups are not weighted.</p>"}</section>${whatIfAssignment ? `<section class="cfe-what-if"><h3>What-if score</h3><p>Test a possible score without changing your official grade.</p><label>${escapeHtml(whatIfAssignment.name || "Assignment")}<input type="number" min="0" max="${escapeAttr(String(whatIfAssignment.points_possible || 0))}" value="0" data-cfe-what-if></label><div><span>Projected total</span><strong data-cfe-projected-total>${possible + Number(whatIfAssignment.points_possible || 0) > 0 ? `${Math.round((earned / (possible + Number(whatIfAssignment.points_possible || 0))) * 1000) / 10}%` : "—"}</strong></div><button type="button" data-cfe-what-if-reset>Revert what-if score</button></section>` : ""}<section><p>Current total excludes ungraded and excused work. Missing assignments may count as zero until submitted or excused.</p></section></aside></div>`,
     );
-    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    root.querySelector("[data-cfe-grade-group]")?.addEventListener("change", (event) => {
+      const selected = event.currentTarget.value || "all";
+      root.querySelectorAll("[data-cfe-collection-row]").forEach((row) => {
+        row.hidden = selected !== "all" && row.getAttribute("data-cfe-grade-group") !== selected;
+      });
+    });
+    const whatIf = root.querySelector("[data-cfe-what-if]");
+    const projected = root.querySelector("[data-cfe-projected-total]");
+    const updateProjection = () => {
+      if (!whatIf || !projected || !whatIfAssignment) return;
+      const trial = Math.min(Number(whatIf.max || 0), Math.max(0, Number(whatIf.value || 0)));
+      const projectedPossible = possible + Number(whatIfAssignment.points_possible || 0);
+      projected.textContent = projectedPossible > 0 ? `${Math.round(((earned + trial) / projectedPossible) * 1000) / 10}%` : "—";
+    };
+    whatIf?.addEventListener("input", updateProjection);
+    root.querySelector("[data-cfe-what-if-reset]")?.addEventListener("click", () => {
+      if (whatIf) whatIf.value = "0";
+      updateProjection();
+    });
     return root;
   }
 
@@ -1111,24 +1400,48 @@
     return type.replace(/Enrollment$/i, "").replace(/([a-z])([A-Z])/g, "$1 $2");
   }
 
-  function renderPeopleExperience(people, courseName) {
+  function renderPeopleExperience(people, groups, courseName) {
     const rows = (Array.isArray(people) ? people : []).filter(Boolean);
+    const groupRows = (Array.isArray(groups) ? groups : []).filter(Boolean);
+    const sections = Array.from(new Set(rows.flatMap((person) =>
+      (Array.isArray(person?.enrollments) ? person.enrollments : [])
+        .map((enrollment) => enrollment?.course_section_id || enrollment?.sis_section_id)
+        .filter(Boolean),
+    )));
     const root = createDataExperienceRoot({
       kind: "people",
       eyebrow: "Course roster",
       title: "People",
-      description: `Classmates, instructors, and course groups in ${courseName}.`,
+      description: `${rows.length} people across ${sections.length || 1} section${sections.length === 1 ? "" : "s"} · roster information is course-visible only.`,
     });
     root.insertAdjacentHTML(
       "beforeend",
-      `<div class="cfe-people-workspace"><div><div class="cfe-collection-controls"><label><span class="screenreader-only">Search people</span><input data-cfe-collection-search type="search" placeholder="Search people"></label><select aria-label="Filter by role"><option>All roles</option><option>Student</option><option>Teacher</option></select><span>${rows.length} people</span></div>
-      <section class="cfe-data-table cfe-people-table"><header><span>Person</span><span>Role</span><span>Section</span><span>Status</span></header>${rows.map((person) => {
+      `<div class="cfe-people-workspace"><div><div class="cfe-collection-controls cfe-people-controls"><label><span class="screenreader-only">Search people</span><input data-cfe-collection-search type="search" placeholder="Search people"></label><select data-cfe-people-role aria-label="Filter by role"><option value="all">All roles</option><option value="student">Student</option><option value="teacher">Teacher</option><option value="ta">TA</option></select><select data-cfe-people-section aria-label="Filter by section"><option value="all">All sections</option>${sections.map((section) => `<option value="${escapeAttr(String(section))}">Section ${escapeHtml(String(section))}</option>`).join("")}</select></div>
+      <section class="cfe-data-table cfe-people-table"><header><span>Name</span><span>Role</span><span>Section / group</span><span>Last activity</span></header>${rows.map((person) => {
         const name = person?.display_name || person?.name || "Canvas user";
         const enrollment = Array.isArray(person?.enrollments) ? person.enrollments[0] : null;
-        return `<a data-cfe-collection-row href="${escapeAttr(sanitizeHref(person?.html_url || person?.url || "#"))}"><div class="cfe-person-cell"><i>${escapeHtml(announcementInitials(name))}</i><span><strong>${escapeHtml(name)}</strong><small>${escapeHtml(person?.sortable_name || "Enrolled")}</small></span></div><span>${escapeHtml(personRole(person))}</span><span>${escapeHtml(enrollment?.sis_section_id || enrollment?.course_section_id ? `Section ${enrollment?.course_section_id || enrollment?.sis_section_id}` : "Course section")}</span><em class="is-${enrollment?.enrollment_state === "active" ? "success" : "muted"}">${escapeHtml(enrollment?.enrollment_state || "Active")}</em></a>`;
-      }).join("") || '<div class="cfe-collection-empty">The course roster is unavailable.</div>'}</section></div><aside class="cfe-course-context-panel"><section><header><h3>Enrollment summary</h3></header>${Array.from(rows.reduce((map, person) => { const role = personRole(person); map.set(role, (map.get(role) || 0) + 1); return map; }, new Map())).map(([role, count]) => `<p class="cfe-summary-line"><span>${escapeHtml(role)}s</span><strong>${count}</strong></p>`).join("")}</section><section><header><h3>Roster tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/users`)}">View complete roster</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/groups`)}">View course groups</a></section></aside></div>`,
+        const role = personRole(person);
+        const section = enrollment?.course_section_id || enrollment?.sis_section_id || "";
+        const profileUrl = person?.html_url || person?.url || (person?.id ? `${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/users/${person.id}` : "#");
+        return `<a data-cfe-collection-row data-cfe-person-role="${escapeAttr(role.toLowerCase())}" data-cfe-person-section="${escapeAttr(String(section))}" href="${escapeAttr(sanitizeHref(profileUrl))}"><div class="cfe-person-cell"><i>${escapeHtml(announcementInitials(name))}</i><span><strong>${escapeHtml(name)}</strong><small>${escapeHtml(enrollment?.enrollment_state === "active" ? "Enrolled" : enrollment?.enrollment_state || "Enrolled")}</small></span></div><span>${escapeHtml(role)}</span><span>${escapeHtml(section ? `Section ${section}` : "Course section")}</span><span>${escapeHtml(formatCourseDate(enrollment?.last_activity_at) || "No activity")}</span></a>`;
+      }).join("") || '<div class="cfe-collection-empty">The course roster is unavailable.</div>'}</section><footer class="cfe-roster-footer">Showing ${rows.length} of ${rows.length} people</footer></div><aside class="cfe-course-context-panel"><section><header><h3>Groups</h3><span>${groupRows.length}</span></header>${groupRows.slice(0, 6).map((group) => `<a href="${escapeAttr(sanitizeHref(group?.context_type ? `${window.location.origin}/groups/${group.id}` : group?.url || "#"))}"><strong>${escapeHtml(group?.name || "Course group")}</strong><small>${escapeHtml(String(group?.members_count ?? ""))}${group?.members_count != null ? " members" : ""}</small></a>`).join("") || "<p>No course groups are visible.</p>"}</section><section><header><h3>Enrollment summary</h3></header>${Array.from(rows.reduce((map, person) => { const role = personRole(person); map.set(role, (map.get(role) || 0) + 1); return map; }, new Map())).map(([role, count]) => `<p class="cfe-summary-line"><span>${escapeHtml(role)}s</span><strong>${count}</strong></p>`).join("")}</section><section><header><h3>Roster tools</h3></header><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/users`)}">View complete roster</a><a href="${escapeAttr(`${window.location.origin}/courses/${getCourseIdFromPath(window.location.pathname)}/groups`)}">View course groups</a></section></aside></div>`,
     );
-    bindCollectionSearch(root, "[data-cfe-collection-row]");
+    const applyPeopleFilters = () => {
+      const query = String(root.querySelector("[data-cfe-collection-search]")?.value || "").trim().toLowerCase();
+      const role = root.querySelector("[data-cfe-people-role]")?.value || "all";
+      const section = root.querySelector("[data-cfe-people-section]")?.value || "all";
+      let visible = 0;
+      root.querySelectorAll("[data-cfe-collection-row]").forEach((row) => {
+        const show = (!query || String(row.textContent || "").toLowerCase().includes(query)) && (role === "all" || row.getAttribute("data-cfe-person-role") === role) && (section === "all" || row.getAttribute("data-cfe-person-section") === section);
+        row.hidden = !show;
+        if (show) visible += 1;
+      });
+      const footer = root.querySelector(".cfe-roster-footer");
+      if (footer) footer.textContent = `Showing ${visible} of ${rows.length} people`;
+    };
+    root.querySelector("[data-cfe-collection-search]")?.addEventListener("input", applyPeopleFilters);
+    root.querySelector("[data-cfe-people-role]")?.addEventListener("change", applyPeopleFilters);
+    root.querySelector("[data-cfe-people-section]")?.addEventListener("change", applyPeopleFilters);
     return root;
   }
 
@@ -1182,7 +1495,7 @@
     });
     root.insertAdjacentHTML(
       "beforeend",
-      `<div class="cfe-content-tabs" role="tablist"><button type="button" class="${activeKind === "pages" ? "is-active" : ""}" data-cfe-content-tab="pages">Pages <span>${rows.length}</span></button><button type="button" class="${activeKind === "files" ? "is-active" : ""}" data-cfe-content-tab="files">Files <span>${Array.isArray(files) ? files.length : 0}</span></button></div><div data-cfe-content-panel="pages" ${activeKind === "files" ? "hidden" : ""}><div class="cfe-pages-grid"><section class="cfe-page-index"><header><h2>Pages index</h2><span>${rows.length} pages</span></header><label><span class="screenreader-only">Filter pages</span><input data-cfe-collection-search placeholder="Filter pages"></label><div>${rows.map((page) => `<button type="button" data-cfe-page-url="${escapeAttr(page?.url || "")}" data-cfe-collection-row><strong>${escapeHtml(page?.title || "Course page")}</strong><small>${page?.front_page ? "Front page · " : ""}Updated ${escapeHtml(formatCourseDate(page?.updated_at))}</small></button>`).join("") || '<div class="cfe-collection-empty">No pages are available.</div>'}</div></section><article class="cfe-page-reader" data-cfe-page-reader></article></div></div><div data-cfe-content-panel="files" ${activeKind === "pages" ? "hidden" : ""}>${courseFileRowsHtml(files)}</div>`,
+      `<div class="cfe-content-tabs" role="tablist"><button type="button" class="${activeKind === "pages" ? "is-active" : ""}" data-cfe-content-tab="pages">Pages <span>${rows.length}</span></button><button type="button" class="${activeKind === "files" ? "is-active" : ""}" data-cfe-content-tab="files">Files <span>${Array.isArray(files) ? files.length : 0}</span></button></div><div data-cfe-content-panel="pages" ${activeKind === "files" ? "hidden" : ""}><div class="cfe-pages-grid"><section class="cfe-page-index"><header><h2>Pages index</h2><span>${rows.length} pages</span></header><label><span class="screenreader-only">Filter pages</span><input data-cfe-collection-search placeholder="Filter pages"></label><div>${rows.map((page) => `<button type="button" data-cfe-page-url="${escapeAttr(page?.url || "")}" data-cfe-collection-row><strong>${escapeHtml(page?.title || "Course page")}</strong><small>${page?.front_page ? "Front page · " : ""}Updated ${escapeHtml(formatCourseDate(page?.updated_at))}</small><span class="cfe-page-link-icon">${courseGlyph("chevron")}</span></button>`).join("") || '<div class="cfe-collection-empty">No pages are available.</div>'}</div></section><article class="cfe-page-reader" data-cfe-page-reader></article></div></div><div data-cfe-content-panel="files" ${activeKind === "pages" ? "hidden" : ""}>${courseFileRowsHtml(files)}</div>`,
     );
     const reader = root.querySelector("[data-cfe-page-reader]");
     const paintReader = (page) => {
@@ -1232,9 +1545,10 @@
     return root;
   }
 
-  function renderDiscussionsExperience(topics, courseName, selectedId) {
+  function renderDiscussionsExperience(topics, courseName, selectedId, courseId) {
     return renderAnnouncementsExperience(topics, courseName, selectedId, {
       kind: "discussions",
+      courseId,
     });
   }
 
@@ -1275,7 +1589,7 @@
         root = renderSyllabusExperience(await response.json(), courseName);
       } else if (experience === "course-home") {
         const courseUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}`);
-        ["term", "teachers", "total_scores"].forEach((include) =>
+        ["term", "teachers", "sections", "total_scores"].forEach((include) =>
           courseUrl.searchParams.append("include[]", include),
         );
         const modulesUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/modules`);
@@ -1288,17 +1602,21 @@
         const announcementsUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/discussion_topics`);
         announcementsUrl.searchParams.set("only_announcements", "true");
         announcementsUrl.searchParams.set("per_page", "10");
-        const [course, modules, assignments, announcements] = await Promise.all([
+        const groupsUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/groups`);
+        groupsUrl.searchParams.set("per_page", "20");
+        const [course, modules, assignments, announcements, groups] = await Promise.all([
           fetchCanvasJson(courseUrl),
           fetchCanvasJson(modulesUrl).catch(() => []),
           fetchCanvasJson(assignmentsUrl).catch(() => []),
           fetchCanvasJson(announcementsUrl).catch(() => []),
+          fetchCanvasJson(groupsUrl).catch(() => []),
         ]);
         root = renderCourseHomeExperience(
           course,
           modules,
           assignments,
           announcements,
+          groups,
           courseName,
           courseId,
         );
@@ -1316,8 +1634,8 @@
         const selectedId = path.match(/\/(?:announcements|discussion_topics)\/(\d+)/)?.[1] || "";
         root =
           experience === "announcements"
-            ? renderAnnouncementsExperience(topics, courseName, selectedId)
-            : renderDiscussionsExperience(topics, courseName, selectedId);
+            ? renderAnnouncementsExperience(topics, courseName, selectedId, { courseId })
+            : renderDiscussionsExperience(topics, courseName, selectedId, courseId);
       } else if (experience === "modules") {
         const url = new URL(
           `${window.location.origin}/api/v1/courses/${courseId}/modules`,
@@ -1353,7 +1671,13 @@
         );
         url.searchParams.set("per_page", "100");
         url.searchParams.append("include[]", "enrollments");
-        root = renderPeopleExperience(await fetchCanvasJson(url), courseName);
+        const groupsUrl = new URL(`${window.location.origin}/api/v1/courses/${courseId}/groups`);
+        groupsUrl.searchParams.set("per_page", "50");
+        const [people, groups] = await Promise.all([
+          fetchCanvasJson(url),
+          fetchCanvasJson(groupsUrl).catch(() => []),
+        ]);
+        root = renderPeopleExperience(people, groups, courseName);
       } else if (experience === "quizzes") {
         const url = new URL(
           `${window.location.origin}/api/v1/courses/${courseId}/quizzes`,
@@ -1407,10 +1731,31 @@
 
   function removeCourseDesignAdapter() {
     removeCourseDataExperience();
+    document.querySelectorAll("[data-cfe-surface-painted='true']").forEach((node) => {
+      const originalBackground = node.dataset.cfeOriginalBackground || "";
+      const originalBackgroundColor =
+        node.dataset.cfeOriginalBackgroundColor || "";
+      if (originalBackground) {
+        node.style.setProperty("background", originalBackground);
+      } else {
+        node.style.removeProperty("background");
+      }
+      if (originalBackgroundColor) {
+        node.style.setProperty("background-color", originalBackgroundColor);
+      } else {
+        node.style.removeProperty("background-color");
+      }
+      delete node.dataset.cfeSurfacePainted;
+      delete node.dataset.cfeOriginalBackground;
+      delete node.dataset.cfeOriginalBackgroundColor;
+    });
     document.querySelectorAll(".cfe-tool-states").forEach((node) => node.remove());
     document.querySelectorAll(".cfe-tool-frame-host").forEach((node) =>
       node.classList.remove("cfe-tool-frame-host"),
     );
+    document
+      .querySelectorAll(".cfe-external-native-hidden")
+      .forEach((node) => node.classList.remove("cfe-external-native-hidden"));
     document
       .querySelectorAll(".cfe-course-page-copy--injected")
       .forEach((wrapper) => {
@@ -1453,15 +1798,61 @@
       removeCourseDesignAdapter();
       return;
     }
-    const courseName =
+    const route = getCourseRouteContext(window.location.pathname);
+    document
+      .querySelectorAll(".ic-Layout-contentWrapper, #main, #content")
+      .forEach((node) => {
+        if (node.dataset.cfeSurfacePainted !== "true") {
+          node.dataset.cfeSurfacePainted = "true";
+          node.dataset.cfeOriginalBackground = node.style.background || "";
+          node.dataset.cfeOriginalBackgroundColor =
+            node.style.backgroundColor || "";
+        }
+        const surface = getRootVar("--cfe-surface", "#ffffff");
+        if (
+          node.style.getPropertyValue("background") !== surface ||
+          node.style.getPropertyPriority("background") !== "important"
+        ) {
+          setStyleImportant(node, "background", surface);
+        }
+        if (
+          node.style.getPropertyValue("background-color") !== surface ||
+          node.style.getPropertyPriority("background-color") !== "important"
+        ) {
+          setStyleImportant(node, "background-color", surface);
+        }
+      });
+    const rawCourseName =
       firstNonEmptyText([
         ".ic-app-crumbs__crumbs a[href*='/courses/']",
         "#breadcrumbs a[href*='/courses/']",
         "#section-tabs-header-subtitle",
       ]) || "Course workspace";
+    const courseName = friendlyCourseLabel(rawCourseName) || rawCourseName;
+    const courseCrumb = document.querySelector(
+      ".ic-app-crumbs__crumbs a[href*='/courses/'], #breadcrumbs a[href*='/courses/']",
+    );
+    if (courseCrumb && friendlyCourseLabel(courseCrumb.textContent) === courseName) {
+      courseCrumb.textContent = courseName;
+    }
     const leftSide = document.querySelector("#left-side, .ic-Layout-aside");
     const sectionTabs = leftSide?.querySelector("#section-tabs");
     if (leftSide && sectionTabs) {
+      organizeCourseNavigation(sectionTabs);
+      syncCourseNavigationState(sectionTabs, route);
+      if (route.isCourseHome) {
+        const currentCrumb = document.querySelector(
+          ".ic-app-crumbs__crumb--current, .ic-app-crumbs__crumbs li:last-child",
+        );
+        if (currentCrumb) currentCrumb.textContent = "Home";
+      }
+      const homeLink = Array.from(sectionTabs.querySelectorAll("a[href]")).find(
+        (link) => String(link.textContent || "").trim().toLowerCase() === "home",
+      );
+      const courseId = getCourseIdFromPath(window.location.pathname);
+      if (homeLink && courseId) {
+        homeLink.href = `${window.location.origin}/courses/${courseId}?quickcanvas_home=1`;
+      }
       const navHost = sectionTabs.parentElement || leftSide;
       const identities = Array.from(
         leftSide.querySelectorAll(".cfe-course-identity"),
@@ -1487,7 +1878,9 @@
         title.textContent = courseName;
       }
     }
-    ensureCoursePageHeader(courseName);
+    if (!route.isExternalTool) {
+      ensureCoursePageHeader(courseName);
+    }
     ensureExternalToolToolbar();
     void ensureCourseDataExperience(courseName);
   }
@@ -1617,7 +2010,9 @@
   function bindRouteWatcher() {
     if (routeWatcherBound) return;
     routeWatcherBound = true;
-    let lastHandledPath = window.location.pathname;
+    const currentRouteKey = () =>
+      `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    let lastHandledRoute = currentRouteKey();
     let refreshInFlight = false;
 
     const refreshForRoute = async () => {
@@ -1633,10 +2028,10 @@
 
     const scheduleRouteRefresh = () => {
       if (isStaleInstance()) return;
-      const currentPath = window.location.pathname;
-      if (currentPath === lastHandledPath) return;
-      lastHandledPath = currentPath;
-      if (!isDashboardPath(currentPath)) {
+      const routeKey = currentRouteKey();
+      if (routeKey === lastHandledRoute) return;
+      lastHandledRoute = routeKey;
+      if (!isDashboardPath(window.location.pathname)) {
         removeDashboardShell();
       }
       if (routeRefreshTimer) {
@@ -1651,8 +2046,7 @@
     // Passive watcher for SPA route transitions.
     routeWatcherIntervalId = window.setInterval(() => {
       if (isStaleInstance()) return;
-      const currentPath = window.location.pathname;
-      if (currentPath !== lastHandledPath) {
+      if (currentRouteKey() !== lastHandledRoute) {
         scheduleRouteRefresh();
       }
     }, 300);
@@ -2139,6 +2533,15 @@
     const muted = getRootVar("--cfe-muted", isDark ? "#a8b2bb" : "#6f7b83");
     const text = getRootVar("--cfe-text", isDark ? "#f1f3f5" : "#1f2a33");
 
+    if (document.body?.classList.contains("cfe-page-course-home")) {
+      const currentCrumb = document.querySelector(
+        ".ic-app-crumbs__crumb--current, .ic-app-crumbs__crumbs li:last-child",
+      );
+      if (currentCrumb && currentCrumb.textContent?.trim() !== "Home") {
+        currentCrumb.textContent = "Home";
+      }
+    }
+
     const pathNodes = document.querySelectorAll(
       [
         ".ic-app-nav-toggle-and-crumbs li > a",
@@ -2297,6 +2700,11 @@
     const text = safeTheme.text || palette.text;
     const muted = safeTheme.muted || palette.muted;
     const border = safeTheme.border || palette.border;
+    const requestedHairline = theme?.border || palette.border;
+    const hairline =
+      mode === "light" && getContrastRatio(requestedHairline, surface) > 1.55
+        ? mixColors(requestedHairline, bg, 0.75)
+        : requestedHairline;
     const fontBody = safeTheme.fontBody || "Space Grotesk";
     const fontHead = safeTheme.fontHead || "Fraunces";
     const radius = Number(safeTheme.radius ?? 12);
@@ -2343,6 +2751,7 @@
     rootStyle.setProperty("--cfe-text", text);
     rootStyle.setProperty("--cfe-muted", muted);
     rootStyle.setProperty("--cfe-border", border);
+    rootStyle.setProperty("--cfe-hairline", hairline);
     rootStyle.setProperty(
       "--cfe-accent-soft",
       mode === "dark"
@@ -2356,7 +2765,7 @@
         : mixColors(accent, "#000000", 0.25),
     );
     rootStyle.setProperty("--cfe-accent-contrast", getContrastColor(accent));
-    rootStyle.setProperty("--cfe-divider", mixColors(border, surface, 0.35));
+    rootStyle.setProperty("--cfe-divider", mixColors(hairline, surface, 0.35));
     rootStyle.setProperty("--cfe-muted-strong", mixColors(muted, text, 0.3));
     rootStyle.setProperty(
       "--cfe-hover",
@@ -2486,6 +2895,11 @@
     const text = safeTheme.text || palette.text;
     const muted = safeTheme.muted || palette.muted;
     const border = safeTheme.border || palette.border;
+    const requestedHairline = theme?.border || palette.border;
+    const hairline =
+      mode === "light" && getContrastRatio(requestedHairline, surface) > 1.55
+        ? mixColors(requestedHairline, bg, 0.75)
+        : requestedHairline;
     const fontBody = safeTheme.fontBody || "Space Grotesk";
     const fontHead = safeTheme.fontHead || "Fraunces";
     const radius = Number(safeTheme.radius ?? 12);
@@ -2513,6 +2927,7 @@
     rootStyle.setProperty("--cfe-text", text);
     rootStyle.setProperty("--cfe-muted", muted);
     rootStyle.setProperty("--cfe-border", border);
+    rootStyle.setProperty("--cfe-hairline", hairline);
     rootStyle.setProperty(
       "--cfe-accent-soft",
       mode === "dark"
@@ -2526,7 +2941,7 @@
         : mixColors(accent, "#000000", 0.25),
     );
     rootStyle.setProperty("--cfe-accent-contrast", getContrastColor(accent));
-    rootStyle.setProperty("--cfe-divider", mixColors(border, surface, 0.35));
+    rootStyle.setProperty("--cfe-divider", mixColors(hairline, surface, 0.35));
     rootStyle.setProperty("--cfe-muted-strong", mixColors(muted, text, 0.3));
     rootStyle.setProperty(
       "--cfe-hover",
@@ -2718,7 +3133,15 @@
   }
 
   function bindPassiveRouteSync() {
-    if (passiveRouteSyncBound) return;
+    if (passiveRouteSyncBound) {
+      if (!passiveRouteSyncIntervalId && passiveRouteSyncHandler) {
+        passiveRouteSyncIntervalId = window.setInterval(
+          passiveRouteSyncHandler,
+          1000,
+        );
+      }
+      return;
+    }
     passiveRouteSyncBound = true;
     let lastPath = window.location.pathname || "/";
 
@@ -2768,6 +3191,7 @@
       }
     };
 
+    passiveRouteSyncHandler = sync;
     window.addEventListener("popstate", () => setTimeout(sync, 60));
     window.addEventListener("hashchange", () => setTimeout(sync, 60));
     passiveRouteSyncIntervalId = window.setInterval(sync, 1000);
@@ -4197,7 +4621,12 @@
           </div>
           <div class="cfe-header-controls">
             <button class="cfe-edit-layout" type="button">Edit layout</button>
-            <button class="cfe-refresh" type="button">Refresh</button>
+            <button class="cfe-refresh" type="button" aria-label="Refresh dashboard" title="Refresh dashboard">
+              <svg class="cfe-refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5" />
+                <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5" />
+              </svg>
+            </button>
           </div>
         </div>
         <div class="cfe-actions">
@@ -4491,6 +4920,7 @@
         "announcementsmini",
       ],
     };
+
     const dashboardLayoutDefaults = {
       order: [
         "assignments",
@@ -6229,11 +6659,20 @@
     }
 
     if (refreshBtn) {
-      refreshBtn.addEventListener("click", () => {
+      refreshBtn.addEventListener("click", async () => {
+        if (refreshBtn.disabled) return;
+        refreshBtn.disabled = true;
+        refreshBtn.classList.add("is-loading");
+        refreshBtn.setAttribute("aria-busy", "true");
         suppressAutoFit = true;
-        Promise.resolve(loadData(true)).finally(() => {
+        try {
+          await loadData(true);
+        } finally {
           suppressAutoFit = false;
-        });
+          refreshBtn.disabled = false;
+          refreshBtn.classList.remove("is-loading");
+          refreshBtn.removeAttribute("aria-busy");
+        }
       });
     }
 
